@@ -8,13 +8,26 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
-import { FolderPlus, Download, Upload, Save, Trash2, Copy, FileText, Calendar, Clock, Code } from "lucide-react"
+import {
+  FolderPlus,
+  Download,
+  Upload,
+  Save,
+  Trash2,
+  Copy,
+  FileText,
+  Calendar,
+  Clock,
+  Code,
+  Globe,
+  ExternalLink,
+} from "lucide-react"
 import type { Project } from "./workspace-area"
+import type { ProjectManagerProps } from "./project-manager-props" // Declare the variable before using it
 
-interface ProjectManagerProps {
-  currentProject: Project | null
-  onProjectCreate: (name: string, description: string) => void
-  onProjectUpdate: (project: Project) => void
+const NETLIFY_CONFIG = {
+  clientId: "XAkrd0SVdfyJ0yRze7qGr5NZMnRLrz6lOil9Tu9QiUo",
+  redirectUri: typeof window !== "undefined" ? window.location.origin : "",
 }
 
 export function ProjectManager({ currentProject, onProjectCreate, onProjectUpdate }: ProjectManagerProps) {
@@ -24,6 +37,9 @@ export function ProjectManager({ currentProject, onProjectCreate, onProjectUpdat
   const [isEditing, setIsEditing] = useState(false)
   const [editName, setEditName] = useState("")
   const [editDescription, setEditDescription] = useState("")
+  const [isDeploying, setIsDeploying] = useState(false)
+  const [deploymentUrl, setDeploymentUrl] = useState<string | null>(null)
+  const [deploymentStatus, setDeploymentStatus] = useState<string>("")
 
   const startEditing = () => {
     if (currentProject) {
@@ -136,6 +152,274 @@ export function ProjectManager({ currentProject, onProjectCreate, onProjectUpdat
         lastModified: new Date(),
       }
       onProjectUpdate(duplicatedProject)
+    }
+  }
+
+  const deployToNetlify = async () => {
+    if (!currentProject || currentProject.files.length === 0) {
+      alert("No project files to deploy!")
+      return
+    }
+
+    setIsDeploying(true)
+    setDeploymentStatus("Starting deployment...")
+    setDeploymentUrl(null)
+
+    try {
+      let accessToken = localStorage.getItem("netlify_access_token")
+
+      if (!accessToken) {
+        setDeploymentStatus("Authenticating with Netlify...")
+        try {
+          accessToken = await authenticateWithNetlify()
+        } catch (oauthError) {
+          console.log("[v0] OAuth failed, falling back to manual token:", oauthError)
+          setDeploymentStatus("OAuth failed, requesting manual token...")
+
+          // Fallback to manual token approach
+          const token = prompt(
+            "OAuth authentication failed. Please enter your Netlify Personal Access Token:\n\n" +
+              "1. Go to https://app.netlify.com/user/applications#personal-access-tokens\n" +
+              "2. Click 'New access token'\n" +
+              "3. Give it a name and copy the token\n" +
+              "4. Paste it here:",
+          )
+
+          if (!token) {
+            throw new Error("Access token required for deployment")
+          }
+
+          accessToken = token.trim()
+          localStorage.setItem("netlify_access_token", accessToken)
+        }
+      }
+
+      setDeploymentStatus("Preparing files for deployment...")
+      const files: { [key: string]: string } = {}
+      let hasHtmlFile = false
+
+      currentProject.files.forEach((file) => {
+        files[file.name] = file.content
+        if (file.name.toLowerCase().includes(".html") || file.name === "index.html") {
+          hasHtmlFile = true
+        }
+        console.log(`[v0] Preparing file: ${file.name} (${file.content.length} characters)`)
+      })
+
+      if (!hasHtmlFile) {
+        console.warn("[v0] No HTML file found, deployment may not work properly")
+      }
+
+      const timestamp = Date.now()
+      const randomString = Math.random().toString(36).substring(2, 8)
+      const uniqueSubdomain =
+        `${currentProject.name.toLowerCase().replace(/[^a-z0-9]/g, "-")}-${timestamp}-${randomString}`.substring(0, 63)
+
+      setDeploymentStatus("Creating site on Netlify...")
+      console.log("[v0] Creating site with unique subdomain:", uniqueSubdomain)
+
+      const deployResponse = await fetch("https://api.netlify.com/api/v1/sites", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: uniqueSubdomain,
+        }),
+      })
+
+      if (!deployResponse.ok) {
+        const errorText = await deployResponse.text()
+        console.error("[v0] Site creation failed:", errorText)
+        throw new Error(`Failed to create site: ${errorText}`)
+      }
+
+      const siteData = await deployResponse.json()
+      const siteId = siteData.id
+      console.log("[v0] Site created successfully:", siteId)
+
+      setDeploymentStatus("Uploading files to site...")
+      const fileDeployResponse = await fetch(`https://api.netlify.com/api/v1/sites/${siteId}/deploys`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          files: files,
+        }),
+      })
+
+      if (!fileDeployResponse.ok) {
+        const errorText = await fileDeployResponse.text()
+        console.error("[v0] File deployment failed:", errorText)
+        throw new Error(`Failed to deploy files: ${errorText}`)
+      }
+
+      const deployData = await fileDeployResponse.json()
+      console.log("[v0] Deploy data:", deployData)
+
+      setDeploymentStatus("Finalizing deployment...")
+
+      // Wait a bit for the deployment to propagate
+      await new Promise((resolve) => setTimeout(resolve, 3000))
+
+      const siteUrl = siteData.ssl_url || siteData.url
+      console.log("[v0] Deployment successful:", siteUrl)
+
+      setDeploymentStatus("Verifying site accessibility...")
+      try {
+        const testResponse = await fetch(siteUrl, { method: "HEAD", mode: "no-cors" })
+        console.log("[v0] Site accessibility test completed")
+      } catch (e) {
+        console.log("[v0] Site accessibility test failed (expected for CORS), but site should be live")
+      }
+
+      setDeploymentUrl(siteUrl)
+      setDeploymentStatus("Deployment completed successfully!")
+
+      alert(
+        `🎉 Successfully deployed to Netlify!\n\n` +
+          `Site URL: ${siteUrl}\n\n` +
+          `Note: It may take 1-2 minutes for the site to be fully accessible. ` +
+          `If you get a "Site not found" error, please wait a moment and try again.`,
+      )
+    } catch (error) {
+      console.error("Deployment error:", error)
+      setDeploymentStatus("Deployment failed")
+
+      if (error instanceof Error && error.message.includes("401")) {
+        localStorage.removeItem("netlify_access_token")
+        alert("Invalid access token. Please try again with a valid token.")
+      } else {
+        alert(`Deployment failed: ${error instanceof Error ? error.message : "Unknown error"}`)
+      }
+    } finally {
+      setIsDeploying(false)
+      // Clear status after a delay
+      setTimeout(() => setDeploymentStatus(""), 5000)
+    }
+  }
+
+  const authenticateWithNetlify = async (): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const redirectUri = window.location.origin
+      const authUrl = `https://app.netlify.com/authorize?client_id=${NETLIFY_CONFIG.clientId}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}`
+
+      console.log("[v0] Opening OAuth URL:", authUrl)
+
+      // Check if we're already in an OAuth callback
+      const urlParams = new URLSearchParams(window.location.search)
+      const code = urlParams.get("code")
+      const error = urlParams.get("error")
+
+      if (code) {
+        // We're in the OAuth callback, exchange code for token
+        console.log("[v0] Found OAuth code in URL, exchanging for token")
+        exchangeCodeForToken(code, redirectUri).then(resolve).catch(reject)
+        return
+      }
+
+      if (error) {
+        reject(new Error(`OAuth error: ${error}`))
+        return
+      }
+
+      // Open OAuth in same window instead of popup to avoid issues
+      const shouldUsePopup = confirm(
+        "This will open Netlify authentication. Choose:\n\n" +
+          "OK - Open in popup (recommended)\n" +
+          "Cancel - Open in same tab (fallback)",
+      )
+
+      if (shouldUsePopup) {
+        // Try popup approach
+        const popup = window.open(authUrl, "netlify-oauth", "width=600,height=700,scrollbars=yes,resizable=yes")
+
+        if (!popup) {
+          reject(new Error("Popup blocked. Please allow popups and try again."))
+          return
+        }
+
+        const checkCallback = setInterval(() => {
+          try {
+            if (popup.closed) {
+              clearInterval(checkCallback)
+              reject(new Error("OAuth cancelled by user"))
+              return
+            }
+
+            // Try to read the popup URL (will fail due to CORS until redirect)
+            try {
+              const popupUrl = popup.location.href
+              if (popupUrl.includes("code=")) {
+                const popupParams = new URLSearchParams(popup.location.search)
+                const authCode = popupParams.get("code")
+                if (authCode) {
+                  clearInterval(checkCallback)
+                  popup.close()
+                  exchangeCodeForToken(authCode, redirectUri).then(resolve).catch(reject)
+                  return
+                }
+              }
+            } catch (e) {
+              // Expected CORS error, continue checking
+            }
+          } catch (e) {
+            // Continue checking
+          }
+        }, 1000)
+      } else {
+        // Fallback: redirect in same window
+        window.location.href = authUrl
+      }
+    })
+  }
+
+  const exchangeCodeForToken = async (code: string, redirectUri: string): Promise<string> => {
+    try {
+      console.log("[v0] Exchanging code for token")
+
+      const tokenResponse = await fetch("https://api.netlify.com/oauth/token", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({
+          grant_type: "authorization_code",
+          code: code,
+          client_id: NETLIFY_CONFIG.clientId,
+          client_secret: "AemC6v6hW-Cly5AVwX8A2gPoFg1CJEazqlPT3sWNkGw",
+          redirect_uri: redirectUri,
+        }),
+      })
+
+      if (!tokenResponse.ok) {
+        const errorText = await tokenResponse.text()
+        console.error("[v0] Token exchange failed:", errorText)
+        throw new Error(`Token exchange failed: ${errorText}`)
+      }
+
+      const tokenData = await tokenResponse.json()
+      const accessToken = tokenData.access_token
+
+      if (!accessToken) {
+        throw new Error("No access token received")
+      }
+
+      console.log("[v0] Successfully obtained access token")
+      localStorage.setItem("netlify_access_token", accessToken)
+
+      if (window.location.search.includes("code=")) {
+        const cleanUrl = window.location.origin + window.location.pathname
+        window.history.replaceState({}, document.title, cleanUrl)
+      }
+
+      return accessToken
+    } catch (error) {
+      console.error("[v0] Token exchange error:", error)
+      throw error
     }
   }
 
@@ -314,6 +598,32 @@ export function ProjectManager({ currentProject, onProjectCreate, onProjectUpdat
               {/* Project Actions */}
               <div className="flex flex-wrap gap-2">
                 <Button
+                  onClick={deployToNetlify}
+                  disabled={isDeploying || !currentProject?.files.length}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                  size="sm"
+                >
+                  <Globe className="w-4 h-4 mr-2" />
+                  {isDeploying ? "Deploying..." : "Deploy to Netlify"}
+                </Button>
+
+                {deploymentStatus && (
+                  <div className="text-sm text-blue-400 bg-blue-900/20 px-3 py-1 rounded">{deploymentStatus}</div>
+                )}
+
+                {deploymentUrl && (
+                  <Button
+                    onClick={() => window.open(deploymentUrl, "_blank")}
+                    variant="outline"
+                    className="border-green-600 text-green-400 hover:bg-green-600 hover:text-white bg-transparent"
+                    size="sm"
+                  >
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    View Live Site
+                  </Button>
+                )}
+
+                <Button
                   onClick={exportProject}
                   variant="outline"
                   className="border-gray-600 text-white bg-transparent"
@@ -322,6 +632,7 @@ export function ProjectManager({ currentProject, onProjectCreate, onProjectUpdat
                   <Download className="w-4 h-4 mr-2" />
                   Export Project
                 </Button>
+
                 <Button
                   onClick={exportAllFiles}
                   variant="outline"

@@ -358,10 +358,8 @@ body {
 console.log('App loaded successfully!');
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM ready!');
-    
     // Add interactive features
-    console.log('App loaded successfully!');
+    console.log('DOM ready!');
 });
 
 // Include all necessary JavaScript
@@ -378,10 +376,15 @@ MANDATORY RULES:
 
 The system will first create all files from your structure, then populate them with your code.`
 
+        const apiKey = localStorage.getItem("sparrow_openrouter_key")
+        if (!apiKey) {
+          throw new Error("No API key found. Please refresh the page to set up your API key.")
+        }
+
         const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
           method: "POST",
           headers: {
-            Authorization: "Bearer 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",
+            Authorization: `Bearer ${apiKey}`,
             "HTTP-Referer": window.location.origin,
             "X-Title": "Sparrow AI",
             "Content-Type": "application/json",
@@ -1073,19 +1076,19 @@ setTimeout(() => {
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.6 }}
       >
-        <div className="flex flex-col space-y-3 md:flex-row md:space-y-0 md:space-x-3">
+        <div className="flex space-x-3">
           <Textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder="Ask Sparrow to create a website, component, or help with code..."
-            className="flex-1 bg-gray-900/80 border-gray-700 text-white placeholder-gray-400 resize-none transition-all-smooth focus:glow-white backdrop-blur-sm min-h-[44px] md:min-h-[auto]"
+            className="flex-1 bg-gray-900/80 border-gray-700 text-white placeholder-gray-400 resize-none transition-all-smooth focus:glow-white backdrop-blur-sm"
             rows={2}
           />
           <Button
             onClick={sendMessage}
             disabled={!input.trim() || isLoading}
-            className="bg-gradient-to-r from-white to-gray-200 text-black hover:from-gray-200 hover:to-gray-300 transition-all-smooth hover-scale disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] px-6"
+            className="bg-gradient-to-r from-white to-gray-200 text-black hover:from-gray-200 hover:to-gray-300 transition-all-smooth hover-scale disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <motion.div whileTap={{ scale: 0.9 }} transition={{ type: "spring", stiffness: 400 }}>
               <Send className="w-4 h-4" />

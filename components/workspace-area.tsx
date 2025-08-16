@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Eye, Code, Activity, Settings, Info } from "lucide-react"
+import { Eye, Code, Activity, Settings } from "lucide-react"
 import { CodeEditor } from "./code-editor"
 import { PreviewPanel } from "./preview-panel"
 import { StatusPanel } from "./status-panel"
@@ -27,11 +27,7 @@ export interface Project {
   lastModified: Date
 }
 
-interface WorkspaceAreaProps {
-  isMobile?: boolean
-}
-
-export function WorkspaceArea({ isMobile = false }: WorkspaceAreaProps) {
+export function WorkspaceArea() {
   const [activeTab, setActiveTab] = useState("preview")
   const [currentProject, setCurrentProject] = useState<Project | null>(null)
   const [activeFileId, setActiveFileId] = useState<string | null>(null)
@@ -119,6 +115,7 @@ document.addEventListener('DOMContentLoaded', function() {
     setActiveFileId("index_html")
   }
 
+  // Load project from localStorage on mount or create default
   useEffect(() => {
     const savedProject = localStorage.getItem("sparrow_current_project")
     if (savedProject) {
@@ -142,12 +139,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }, [])
 
+  // Save project to localStorage whenever it changes
   useEffect(() => {
     if (currentProject) {
       localStorage.setItem("sparrow_current_project", JSON.stringify(currentProject))
     }
   }, [currentProject])
 
+  // Listen for code generation events from chat
   useEffect(() => {
     const handleCodeGenerated = (event: CustomEvent) => {
       const { code, language, filename } = event.detail
@@ -171,6 +170,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return
       }
 
+      // Ensure all files from structure exist
       const now = new Date()
       setCurrentProject((prev) => {
         if (!prev) return null
@@ -292,7 +292,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
       setCurrentProject(newProject)
       setActiveFileId("index_html")
-      setActiveTab("preview")
+      setActiveTab("preview") // Start with preview tab for new projects
     }
 
     window.addEventListener("codeGenerated", handleCodeGenerated as EventListener)
@@ -336,6 +336,7 @@ document.addEventListener('DOMContentLoaded', function() {
       let updatedFiles
 
       if (existingIndex >= 0) {
+        // Update existing file
         updatedFiles = [...prev.files]
         updatedFiles[existingIndex] = {
           ...updatedFiles[existingIndex],
@@ -344,6 +345,7 @@ document.addEventListener('DOMContentLoaded', function() {
           lastModified: now,
         }
       } else {
+        // Add new file
         const newFile: ProjectFile = {
           id: fileId,
           name: filename,
@@ -363,7 +365,7 @@ document.addEventListener('DOMContentLoaded', function() {
     })
 
     setActiveFileId(fileId)
-    setActiveTab("code")
+    setActiveTab("code") // Switch to code tab when new code is generated
   }
 
   const updateSpecificFile = (filename: string, content: string, language: string) => {
@@ -393,6 +395,7 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     })
 
+    // Switch to code tab when content is updated
     setActiveTab("code")
   }
 
@@ -440,27 +443,25 @@ document.addEventListener('DOMContentLoaded', function() {
   return (
     <div className="h-full flex flex-col">
       <motion.div
-        className="border-b border-gray-800 p-3 backdrop-blur-sm bg-black/50 flex-shrink-0"
+        className="border-b border-gray-800 p-4 backdrop-blur-sm bg-black/50 flex-shrink-0"
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.4 }}
       >
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList
-            className={`grid w-full ${isMobile ? "grid-cols-3" : "grid-cols-4"} bg-gray-900/80 backdrop-blur-sm`}
-          >
+          <TabsList className="grid w-full grid-cols-4 bg-gray-900/80 backdrop-blur-sm">
             <TabsTrigger
               value="preview"
-              className="data-[state=active]:bg-white data-[state=active]:text-black transition-all-smooth hover-lift relative overflow-hidden animated-border text-xs sm:text-sm"
+              className="data-[state=active]:bg-white data-[state=active]:text-black transition-all-smooth hover-lift relative overflow-hidden animated-border"
             >
-              <Eye className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+              <Eye className="w-4 h-4 mr-2" />
               Preview
             </TabsTrigger>
             <TabsTrigger
               value="code"
-              className="data-[state=active]:bg-white data-[state=active]:text-black transition-all-smooth hover-lift relative overflow-hidden animated-border text-xs sm:text-sm"
+              className="data-[state=active]:bg-white data-[state=active]:text-black transition-all-smooth hover-lift relative overflow-hidden animated-border"
             >
-              <Code className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+              <Code className="w-4 h-4 mr-2" />
               Code{" "}
               <AnimatePresence>
                 {files.length > 0 && (
@@ -468,44 +469,32 @@ document.addEventListener('DOMContentLoaded', function() {
                     initial={{ scale: 0, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     exit={{ scale: 0, opacity: 0 }}
-                    className="ml-1 bg-white text-black rounded-full px-1.5 py-0.5 text-xs pulse-glow"
+                    className="ml-1 bg-white text-black rounded-full px-2 py-0.5 text-xs pulse-glow"
                   >
                     {files.length}
                   </motion.span>
                 )}
               </AnimatePresence>
             </TabsTrigger>
-            {isMobile ? (
-              <TabsTrigger
-                value="info"
-                className="data-[state=active]:bg-white data-[state=active]:text-black transition-all-smooth hover-lift relative overflow-hidden animated-border text-xs sm:text-sm"
-              >
-                <Info className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                Info
-              </TabsTrigger>
-            ) : (
-              <>
-                <TabsTrigger
-                  value="status"
-                  className="data-[state=active]:bg-white data-[state=active]:text-black transition-all-smooth hover-lift relative overflow-hidden animated-border text-xs sm:text-sm"
-                >
-                  <Activity className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                  Status
-                </TabsTrigger>
-                <TabsTrigger
-                  value="project"
-                  className="data-[state=active]:bg-white data-[state=active]:text-black transition-all-smooth hover-lift relative overflow-hidden animated-border text-xs sm:text-sm"
-                >
-                  <Settings className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                  Project
-                </TabsTrigger>
-              </>
-            )}
+            <TabsTrigger
+              value="status"
+              className="data-[state=active]:bg-white data-[state=active]:text-black transition-all-smooth hover-lift relative overflow-hidden animated-border"
+            >
+              <Activity className="w-4 h-4 mr-2" />
+              Status
+            </TabsTrigger>
+            <TabsTrigger
+              value="project"
+              className="data-[state=active]:bg-white data-[state=active]:text-black transition-all-smooth hover-lift relative overflow-hidden animated-border"
+            >
+              <Settings className="w-4 h-4 mr-2" />
+              Project
+            </TabsTrigger>
           </TabsList>
         </Tabs>
       </motion.div>
 
-      <div className="flex-1 p-2 sm:p-4 min-h-0">
+      <div className="flex-1 p-4 min-h-0">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full">
           <AnimatePresence mode="wait">
             <TabsContent value="preview" className="h-full overflow-hidden">
@@ -541,63 +530,35 @@ document.addEventListener('DOMContentLoaded', function() {
               </motion.div>
             </TabsContent>
 
-            {isMobile ? (
-              <TabsContent value="info" className="h-full overflow-hidden">
-                <motion.div
-                  key="info"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.3 }}
-                  className="h-full overflow-y-auto space-y-4"
-                >
-                  <div className="bg-gray-900/50 rounded-lg p-3">
-                    <h3 className="text-sm font-semibold mb-2 text-white">Project Status</h3>
-                    <StatusPanel files={files} project={currentProject} />
-                  </div>
-                  <div className="bg-gray-900/50 rounded-lg p-3">
-                    <h3 className="text-sm font-semibold mb-2 text-white">Project Settings</h3>
-                    <ProjectManager
-                      currentProject={currentProject}
-                      onProjectCreate={createNewProject}
-                      onProjectUpdate={setCurrentProject}
-                    />
-                  </div>
-                </motion.div>
-              </TabsContent>
-            ) : (
-              <>
-                <TabsContent value="status" className="h-full overflow-hidden">
-                  <motion.div
-                    key="status"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.3 }}
-                    className="h-full"
-                  >
-                    <StatusPanel files={files} project={currentProject} />
-                  </motion.div>
-                </TabsContent>
+            <TabsContent value="status" className="h-full overflow-hidden">
+              <motion.div
+                key="status"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
+                className="h-full"
+              >
+                <StatusPanel files={files} project={currentProject} />
+              </motion.div>
+            </TabsContent>
 
-                <TabsContent value="project" className="h-full overflow-hidden">
-                  <motion.div
-                    key="project"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.3 }}
-                    className="h-full"
-                  >
-                    <ProjectManager
-                      currentProject={currentProject}
-                      onProjectCreate={createNewProject}
-                      onProjectUpdate={setCurrentProject}
-                    />
-                  </motion.div>
-                </TabsContent>
-              </>
-            )}
+            <TabsContent value="project" className="h-full overflow-hidden">
+              <motion.div
+                key="project"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
+                className="h-full"
+              >
+                <ProjectManager
+                  currentProject={currentProject}
+                  onProjectCreate={createNewProject}
+                  onProjectUpdate={setCurrentProject}
+                />
+              </motion.div>
+            </TabsContent>
           </AnimatePresence>
         </Tabs>
       </div>
