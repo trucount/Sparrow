@@ -431,6 +431,30 @@ export function ProjectManager({ currentProject, onProjectCreate, onProjectUpdat
                       placeholder="https://getpantry.cloud/apiv1/pantry/YOUR_ID/basket/YOUR_BASKET"
                       className="bg-gray-900 border-gray-600 text-white"
                     />
+                    <div className="mt-2 text-sm text-gray-400 space-y-1">
+                      <p className="font-medium text-gray-300">How to get your Pantry basket URL:</p>
+                      <ol className="list-decimal list-inside space-y-1 ml-2">
+                        <li>
+                          Visit{" "}
+                          <a
+                            href="https://getpantry.cloud"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-400 hover:text-blue-300 underline"
+                          >
+                            getpantry.cloud
+                          </a>
+                        </li>
+                        <li>Create a new pantry (you'll get a unique pantry ID)</li>
+                        <li>Create a basket with any name (e.g., "myproject")</li>
+                        <li>Copy the full basket URL from the dashboard</li>
+                        <li>Paste it above to connect your cloud storage</li>
+                      </ol>
+                      <p className="text-xs text-gray-500 mt-2">
+                        💡 Tip: Your URL should look like:
+                        https://getpantry.cloud/apiv1/pantry/[your-id]/basket/[basket-name]
+                      </p>
+                    </div>
                   </div>
                   <div className="flex items-center space-x-2">
                     <Button onClick={connectToPantry} className="bg-green-600 hover:bg-green-700 text-white">

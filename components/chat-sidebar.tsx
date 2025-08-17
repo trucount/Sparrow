@@ -6,7 +6,7 @@ import { useState, useRef, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Send, Plus, MessageSquare, Sparkles } from "lucide-react"
+import { Send, Plus, MessageSquare, Sparkles, Loader2, X, ImageIcon } from "lucide-react"
 
 interface Message {
   id: string
@@ -35,6 +35,10 @@ export function ChatSidebar() {
   const [isLoading, setIsLoading] = useState(false)
   const [selectedModel, setSelectedModel] = useState<string>("qwen/qwen3-coder:free")
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const [selectedImage, setSelectedImage] = useState<File | null>(null)
+  const [imageAnalysis, setImageAnalysis] = useState<string>("")
+  const [canSend, setCanSend] = useState(true)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const availableModels = [
     { id: "qwen/qwen3-coder:free", name: "Qwen3 Coder (Free)" },
@@ -281,8 +285,110 @@ export function ChatSidebar() {
     )
   }
 
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file && file.type.startsWith("image/")) {
+      setSelectedImage(file)
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        setImageAnalysis(e.target?.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const removeImage = () => {
+    setSelectedImage(null)
+    setImageAnalysis("")
+    setCanSend(true)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""
+    }
+  }
+
+  const convertImageToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result as string)
+      reader.onerror = reject
+      reader.readAsDataURL(file)
+    })
+  }
+
+  const processImageWithVision = async (file: File) => {
+    setCanSend(false)
+
+    try {
+      const imageBase64 = await convertImageToBase64(file)
+      const apiKey = localStorage.getItem("sparrow_openrouter_key")
+
+      if (!apiKey) {
+        throw new Error("No API key found. Please refresh the page to set up your API key.")
+      }
+
+      console.log("[v0] Processing image with vision API")
+
+      const visionResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "HTTP-Referer": window.location.origin,
+          "X-Title": "Sparrow AI",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "qwen/qwen2.5-vl-72b-instruct:free",
+          messages: [
+            {
+              role: "user",
+              content: [
+                {
+                  type: "text",
+                  text: "What is in this image? Describe it in detail.",
+                },
+                {
+                  type: "image_url",
+                  image_url: {
+                    url: imageBase64,
+                  },
+                },
+              ],
+            },
+          ],
+        }),
+      })
+
+      if (!visionResponse.ok) {
+        const errorText = await visionResponse.text()
+        console.error("[v0] Vision API error:", errorText)
+        throw new Error(`Vision API error: ${visionResponse.status}`)
+      }
+
+      const visionData = await visionResponse.json()
+      const imageDescription = visionData.choices?.[0]?.message?.content || "Could not analyze image"
+
+      console.log("[v0] Image analysis received:", imageDescription)
+      setImageAnalysis(imageDescription)
+      setCanSend(true)
+    } catch (error) {
+      console.error("[v0] Error processing image:", error)
+      setImageAnalysis("Image attached but could not be analyzed")
+      setCanSend(true)
+    }
+  }
+
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      setSelectedImage(file)
+      setImageAnalysis("")
+      processImageWithVision(file)
+    }
+  }
+
   const sendMessage = async () => {
-    if (!input.trim()) return
+    if (!input.trim() && !selectedImage) return
+    if (!canSend) return
 
     let sessionId = currentSession
     if (!sessionId) {
@@ -290,34 +396,43 @@ export function ChatSidebar() {
       sessionId = Date.now().toString()
     }
 
+    let finalContent = input.trim()
+
+    // Add image analysis if available
+    if (selectedImage && imageAnalysis) {
+      finalContent = `${input.trim()}\n\n[Image Analysis]: ${imageAnalysis}`
+    } else if (selectedImage) {
+      finalContent = `${input.trim()}\n\n[Image attached but could not be analyzed]`
+    }
+
     const userMessage: Message = {
       id: Date.now().toString(),
+      content: finalContent,
       role: "user",
-      content: input.trim(),
       timestamp: new Date(),
     }
 
+    // Clear input and image after sending
+    setInput("")
+    setSelectedImage(null)
+    setImageAnalysis("")
+    setCanSend(true)
+
+    // Add user message to chat
     setSessions((prev) =>
       prev.map((session) =>
-        session.id === sessionId
-          ? {
-              ...session,
-              messages: [...session.messages, userMessage],
-              title: session.messages.length === 0 ? input.trim().slice(0, 30) + "..." : session.title,
-            }
-          : session,
+        session.id === sessionId ? { ...session, messages: [...session.messages, userMessage] } : session,
       ),
     )
 
-    setInput("")
-    setIsLoading(true)
+    // Wait 3 seconds then send to AI
+    setTimeout(async () => {
+      const makeAPICall = async (retryCount = 0): Promise<any> => {
+        const maxRetries = 3
+        const baseDelay = 1000 // 1 second
 
-    const makeAPICall = async (retryCount = 0): Promise<any> => {
-      const maxRetries = 3
-      const baseDelay = 1000 // 1 second
-
-      try {
-        const systemPrompt = `You are Sparrow, an AI coding assistant specialized in web development. You help users create complete web applications with HTML, CSS, and JavaScript.
+        try {
+          const systemPrompt = `You are Sparrow, an AI coding assistant specialized in web development. You help users create complete web applications with HTML, CSS, and JavaScript.
 
 CRITICAL REQUIREMENTS - ALWAYS FOLLOW THIS EXACT FORMAT:
 
@@ -386,108 +501,111 @@ MANDATORY RULES:
 
 The system will first create all files from your structure, then populate them with your code.`
 
-        const apiKey = localStorage.getItem("sparrow_openrouter_key")
-        if (!apiKey) {
-          throw new Error("No API key found. Please refresh the page to set up your API key.")
-        }
-
-        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            "HTTP-Referer": window.location.origin,
-            "X-Title": "Sparrow AI",
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: selectedModel,
-            messages: [
-              {
-                role: "system",
-                content: systemPrompt,
-              },
-              {
-                role: "user",
-                content: userMessage.content,
-              },
-            ],
-          }),
-        })
-
-        if (response.status === 429) {
-          if (retryCount < maxRetries) {
-            const delay = baseDelay * Math.pow(2, retryCount)
-            console.log(`Rate limited. Retrying in ${delay}ms... (attempt ${retryCount + 1}/${maxRetries})`)
-
-            const rateLimitMessage: Message = {
-              id: (Date.now() + Math.random()).toString(),
-              role: "assistant",
-              content: `Rate limit reached. Retrying in ${delay / 1000} seconds... (attempt ${retryCount + 1}/${maxRetries})`,
-              timestamp: new Date(),
-            }
-
-            setSessions((prev) =>
-              prev.map((session) =>
-                session.id === sessionId ? { ...session, messages: [...session.messages, rateLimitMessage] } : session,
-              ),
-            )
-
-            await new Promise((resolve) => setTimeout(resolve, delay))
-            return makeAPICall(retryCount + 1)
-          } else {
-            throw new Error("Rate limit exceeded. Please try again later.")
+          const apiKey = localStorage.getItem("sparrow_openrouter_key")
+          if (!apiKey) {
+            throw new Error("No API key found. Please refresh the page to set up your API key.")
           }
-        }
 
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`)
-        }
-
-        return await response.json()
-      } catch (error) {
-        if (retryCount < maxRetries && (error instanceof TypeError || error.message.includes("fetch"))) {
-          const delay = baseDelay * Math.pow(2, retryCount)
-          console.log(`Network error. Retrying in ${delay}ms... (attempt ${retryCount + 1}/${maxRetries})`)
-          await new Promise((resolve) => setTimeout(resolve, delay))
-          return makeAPICall(retryCount + 1)
-        }
-        throw error
-      }
-    }
-
-    try {
-      const data = await makeAPICall()
-
-      if (!data || !data.choices || !Array.isArray(data.choices) || data.choices.length === 0) {
-        console.error("Invalid API response structure:", data)
-        throw new Error("Invalid response from AI service")
-      }
-
-      const choice = data.choices[0]
-      if (!choice || !choice.message || typeof choice.message.content !== "string") {
-        console.error("Invalid message structure:", choice)
-        throw new Error("Invalid message format from AI service")
-      }
-
-      const assistantContent = choice.message.content
-
-      const fileStructure = parseFileStructure(assistantContent)
-      if (fileStructure.length > 0) {
-        triggerFileStructureCreation(fileStructure)
-
-        // Small delay to ensure files are created before content update
-        setTimeout(() => {
-          const { htmlContent, cssContent, jsContent } = extractCodeContent(assistantContent)
-
-          console.log("[v0] Code extraction results:", {
-            html: htmlContent ? "Found" : "Missing",
-            css: cssContent ? "Found" : "Missing",
-            js: jsContent ? "Found" : "Missing",
+          const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${apiKey}`,
+              "HTTP-Referer": window.location.origin,
+              "X-Title": "Sparrow AI",
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: selectedModel,
+              messages: [
+                {
+                  role: "system",
+                  content: systemPrompt,
+                },
+                {
+                  role: "user",
+                  content: userMessage.content,
+                },
+              ],
+            }),
           })
 
-          const finalHtmlContent =
-            htmlContent ||
-            `<!DOCTYPE html>
+          if (response.status === 429) {
+            if (retryCount < maxRetries) {
+              const delay = baseDelay * Math.pow(2, retryCount)
+              console.log(`Rate limited. Retrying in ${delay}ms... (attempt ${retryCount + 1}/${maxRetries})`)
+
+              const rateLimitMessage: Message = {
+                id: (Date.now() + Math.random()).toString(),
+                role: "assistant",
+                content: `Rate limit reached. Retrying in ${delay / 1000} seconds... (attempt ${retryCount + 1}/${maxRetries})`,
+                timestamp: new Date(),
+              }
+
+              setSessions((prev) =>
+                prev.map((session) =>
+                  session.id === sessionId
+                    ? { ...session, messages: [...session.messages, rateLimitMessage] }
+                    : session,
+                ),
+              )
+
+              await new Promise((resolve) => setTimeout(resolve, delay))
+              return makeAPICall(retryCount + 1)
+            } else {
+              throw new Error("Rate limit exceeded. Please try again later.")
+            }
+          }
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`)
+          }
+
+          return await response.json()
+        } catch (error) {
+          if (retryCount < maxRetries && (error instanceof TypeError || error.message.includes("fetch"))) {
+            const delay = baseDelay * Math.pow(2, retryCount)
+            console.log(`Network error. Retrying in ${delay}ms... (attempt ${retryCount + 1}/${maxRetries})`)
+            await new Promise((resolve) => setTimeout(resolve, delay))
+            return makeAPICall(retryCount + 1)
+          }
+          throw error
+        }
+      }
+
+      try {
+        setIsLoading(true)
+        const data = await makeAPICall()
+
+        if (!data || !data.choices || !Array.isArray(data.choices) || data.choices.length === 0) {
+          console.error("Invalid API response structure:", data)
+          throw new Error("Invalid response from AI service")
+        }
+
+        const choice = data.choices[0]
+        if (!choice || !choice.message || typeof choice.message.content !== "string") {
+          console.error("Invalid message structure:", choice)
+          throw new Error("Invalid message format from AI service")
+        }
+
+        const assistantContent = choice.message.content
+
+        const fileStructure = parseFileStructure(assistantContent)
+        if (fileStructure.length > 0) {
+          triggerFileStructureCreation(fileStructure)
+
+          // Small delay to ensure files are created before content update
+          setTimeout(() => {
+            const { htmlContent, cssContent, jsContent } = extractCodeContent(assistantContent)
+
+            console.log("[v0] Code extraction results:", {
+              html: htmlContent ? "Found" : "Missing",
+              css: cssContent ? "Found" : "Missing",
+              js: jsContent ? "Found" : "Missing",
+            })
+
+            const finalHtmlContent =
+              htmlContent ||
+              `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -529,9 +647,9 @@ The system will first create all files from your structure, then populate them w
 </body>
 </html>`
 
-          const finalCssContent =
-            cssContent ||
-            `/* Sparrow AI Generated Styles */
+            const finalCssContent =
+              cssContent ||
+              `/* Sparrow AI Generated Styles */
 * {
     margin: 0;
     padding: 0;
@@ -713,9 +831,9 @@ body {
     }
 }`
 
-          const finalJsContent =
-            jsContent ||
-            `// Sparrow AI Generated JavaScript
+            const finalJsContent =
+              jsContent ||
+              `// Sparrow AI Generated JavaScript
 console.log('🐦 Sparrow AI app loaded successfully!');
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -901,56 +1019,57 @@ setTimeout(() => {
     showNotification('🚀 Sparrow AI app initialized successfully!', 'success');
 }, 1000);`
 
-          triggerCodeContentUpdate(finalHtmlContent, finalCssContent, finalJsContent)
-        }, 500)
-      }
+            triggerCodeContentUpdate(finalHtmlContent, finalCssContent, finalJsContent)
+          }, 500)
+        }
 
-      const cleanContent = removeCodeBlocks(assistantContent)
+        const cleanContent = removeCodeBlocks(assistantContent)
 
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
-        content:
-          cleanContent ||
-          "Complete web application has been generated with HTML, CSS, and JavaScript! Check the Code tab to see all files and the Preview tab to see your app in action.",
-        timestamp: new Date(),
-      }
+        const assistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          role: "assistant",
+          content:
+            cleanContent ||
+            "Complete web application has been generated with HTML, CSS, and JavaScript! Check the Code tab to see all files and the Preview tab to see your app in action.",
+          timestamp: new Date(),
+        }
 
-      setSessions((prev) =>
-        prev.map((session) =>
-          session.id === sessionId ? { ...session, messages: [...session.messages, assistantMessage] } : session,
-        ),
-      )
-
-      const codeBlocks = parseCodeBlocks(assistantContent)
-      if (codeBlocks.length > 0) {
-        console.log(
-          `Found ${codeBlocks.length} additional code blocks:`,
-          codeBlocks.map((b) => b.filename),
+        setSessions((prev) =>
+          prev.map((session) =>
+            session.id === sessionId ? { ...session, messages: [...session.messages, assistantMessage] } : session,
+          ),
         )
-        codeBlocks.forEach((block, index) => {
-          setTimeout(() => {
-            triggerCodeGeneration([block])
-          }, index * 100)
-        })
-      }
-    } catch (error) {
-      console.error("Error calling OpenRouter:", error)
-      const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
-        content: `Sorry, I encountered an error: ${error instanceof Error ? error.message : "Unknown error"}. Please try again.`,
-        timestamp: new Date(),
-      }
 
-      setSessions((prev) =>
-        prev.map((session) =>
-          session.id === sessionId ? { ...session, messages: [...session.messages, errorMessage] } : session,
-        ),
-      )
-    } finally {
-      setIsLoading(false)
-    }
+        const codeBlocks = parseCodeBlocks(assistantContent)
+        if (codeBlocks.length > 0) {
+          console.log(
+            `Found ${codeBlocks.length} additional code blocks:`,
+            codeBlocks.map((b) => b.filename),
+          )
+          codeBlocks.forEach((block, index) => {
+            setTimeout(() => {
+              triggerCodeGeneration([block])
+            }, index * 100)
+          })
+        }
+      } catch (error) {
+        console.error("Error calling OpenRouter:", error)
+        const errorMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          role: "assistant",
+          content: `Sorry, I encountered an error: ${error instanceof Error ? error.message : "Unknown error"}. Please try again.`,
+          timestamp: new Date(),
+        }
+
+        setSessions((prev) =>
+          prev.map((session) =>
+            session.id === currentSession ? { ...session, messages: [...session.messages, errorMessage] } : session,
+          ),
+        )
+      } finally {
+        setIsLoading(false)
+      }
+    }, 3000)
   }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -1086,30 +1205,56 @@ setTimeout(() => {
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.6 }}
       >
-        <div className="flex flex-col space-y-3">
-          <div className="flex space-x-3">
-            <Textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Ask Sparrow to create a website, component, or help with code..."
-              className="flex-1 bg-gray-900/80 border-gray-700 text-white placeholder-gray-400 resize-none transition-all-smooth focus:glow-white backdrop-blur-sm"
-              rows={2}
-            />
-            <div className="flex flex-col space-y-2">
-              <Button
-                onClick={sendMessage}
-                disabled={!input.trim() || isLoading}
-                className="bg-gradient-to-r from-white to-gray-200 text-black hover:from-gray-200 hover:to-gray-300 transition-all-smooth hover-scale disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <motion.div whileTap={{ scale: 0.9 }} transition={{ type: "spring", stiffness: 400 }}>
-                  <Send className="w-4 h-4" />
-                </motion.div>
+        {selectedImage && (
+          <div className="mt-3 p-3 bg-gray-100 dark:bg-gray-800 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <ImageIcon className="w-4 h-4" />
+                <span className="text-sm text-gray-600 dark:text-gray-400">{selectedImage.name}</span>
+              </div>
+              <Button onClick={removeImage} variant="ghost" size="sm" className="text-red-500 hover:text-red-700">
+                <X className="w-4 h-4" />
               </Button>
-              <Button className="bg-gradient-to-r from-white to-gray-200 text-black hover:from-gray-200 hover:to-gray-300 transition-all-smooth hover-scale">
-                <motion.div whileTap={{ scale: 0.9 }} transition={{ type: "spring", stiffness: 400 }}>
-                  <Send className="w-4 h-4" />
-                </motion.div>
+            </div>
+            {imageAnalysis && (
+              <div className="mt-2 text-xs text-green-600 dark:text-green-400">✓ Image analyzed successfully</div>
+            )}
+          </div>
+        )}
+
+        <div className="flex flex-col space-y-3">
+          <Textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder="Ask Sparrow to create a website, component, or help with code..."
+            className="flex-1 bg-gray-900/80 border-gray-700 text-white placeholder-gray-400 resize-none transition-all-smooth focus:glow-white backdrop-blur-sm"
+            rows={2}
+          />
+          <div className="flex space-x-3">
+            <Button
+              onClick={sendMessage}
+              disabled={!canSend}
+              className="bg-gradient-to-r from-gray-800 to-gray-700 hover:from-gray-700 hover:to-gray-600 text-white border-gray-600 transition-all-smooth hover-lift glow-white px-4 py-2 rounded-lg"
+            >
+              <Send className="w-4 h-4" />
+            </Button>
+
+            <div className="relative">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden"
+                id="image-upload"
+                disabled={isLoading}
+              />
+              <Button
+                onClick={() => document.getElementById("image-upload")?.click()}
+                disabled={isLoading}
+                className="bg-gradient-to-r from-gray-800 to-gray-700 hover:from-gray-700 hover:to-gray-600 text-white border-gray-600 transition-all-smooth hover-lift glow-white px-4 py-2 rounded-lg w-full"
+              >
+                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
               </Button>
             </div>
           </div>
