@@ -264,6 +264,14 @@ export function ChatSidebar() {
     setCurrentSession(newSession.id)
 
     window.dispatchEvent(
+      new CustomEvent("resetCloudConnection", {
+        detail: {
+          sessionId: newSession.id,
+        },
+      }),
+    )
+
+    window.dispatchEvent(
       new CustomEvent("createNewProject", {
         detail: {
           sessionId: newSession.id,
@@ -358,8 +366,10 @@ body {
 console.log('App loaded successfully!');
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Add interactive features
     console.log('DOM ready!');
+    
+    // Add interactive features
+    console.log('App is ready for interaction!');
 });
 
 // Include all necessary JavaScript
@@ -1076,24 +1086,33 @@ setTimeout(() => {
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.6 }}
       >
-        <div className="flex space-x-3">
-          <Textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="Ask Sparrow to create a website, component, or help with code..."
-            className="flex-1 bg-gray-900/80 border-gray-700 text-white placeholder-gray-400 resize-none transition-all-smooth focus:glow-white backdrop-blur-sm"
-            rows={2}
-          />
-          <Button
-            onClick={sendMessage}
-            disabled={!input.trim() || isLoading}
-            className="bg-gradient-to-r from-white to-gray-200 text-black hover:from-gray-200 hover:to-gray-300 transition-all-smooth hover-scale disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <motion.div whileTap={{ scale: 0.9 }} transition={{ type: "spring", stiffness: 400 }}>
-              <Send className="w-4 h-4" />
-            </motion.div>
-          </Button>
+        <div className="flex flex-col space-y-3">
+          <div className="flex space-x-3">
+            <Textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Ask Sparrow to create a website, component, or help with code..."
+              className="flex-1 bg-gray-900/80 border-gray-700 text-white placeholder-gray-400 resize-none transition-all-smooth focus:glow-white backdrop-blur-sm"
+              rows={2}
+            />
+            <div className="flex flex-col space-y-2">
+              <Button
+                onClick={sendMessage}
+                disabled={!input.trim() || isLoading}
+                className="bg-gradient-to-r from-white to-gray-200 text-black hover:from-gray-200 hover:to-gray-300 transition-all-smooth hover-scale disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <motion.div whileTap={{ scale: 0.9 }} transition={{ type: "spring", stiffness: 400 }}>
+                  <Send className="w-4 h-4" />
+                </motion.div>
+              </Button>
+              <Button className="bg-gradient-to-r from-white to-gray-200 text-black hover:from-gray-200 hover:to-gray-300 transition-all-smooth hover-scale">
+                <motion.div whileTap={{ scale: 0.9 }} transition={{ type: "spring", stiffness: 400 }}>
+                  <Send className="w-4 h-4" />
+                </motion.div>
+              </Button>
+            </div>
+          </div>
         </div>
       </motion.div>
     </div>

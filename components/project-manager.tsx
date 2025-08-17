@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -19,16 +19,13 @@ import {
   Calendar,
   Clock,
   Code,
+  Cloud,
+  CloudOff,
+  Settings,
   Globe,
-  ExternalLink,
 } from "lucide-react"
 import type { Project } from "./workspace-area"
-import type { ProjectManagerProps } from "./project-manager-props" // Declare the variable before using it
-
-const NETLIFY_CONFIG = {
-  clientId: "XAkrd0SVdfyJ0yRze7qGr5NZMnRLrz6lOil9Tu9QiUo",
-  redirectUri: typeof window !== "undefined" ? window.location.origin : "",
-}
+import type { ProjectManagerProps } from "./project-manager-props"
 
 export function ProjectManager({ currentProject, onProjectCreate, onProjectUpdate }: ProjectManagerProps) {
   const [isCreating, setIsCreating] = useState(false)
@@ -37,9 +34,231 @@ export function ProjectManager({ currentProject, onProjectCreate, onProjectUpdat
   const [isEditing, setIsEditing] = useState(false)
   const [editName, setEditName] = useState("")
   const [editDescription, setEditDescription] = useState("")
-  const [isDeploying, setIsDeploying] = useState(false)
-  const [deploymentUrl, setDeploymentUrl] = useState<string | null>(null)
-  const [deploymentStatus, setDeploymentStatus] = useState<string>("")
+  const [pantryUrl, setPantryUrl] = useState("")
+  const [isPantryConnected, setIsPantryConnected] = useState(false)
+  const [isShowingPantrySetup, setIsShowingPantrySetup] = useState(false)
+  const [isSavingToPantry, setIsSavingToPantry] = useState(false)
+  const [isLoadingFromPantry, setIsLoadingFromPantry] = useState(false)
+  const [pantryStatus, setPantryStatus] = useState("")
+  const [autoSyncEnabled, setAutoSyncEnabled] = useState(false)
+  const [deployUrl, setDeployUrl] = useState<string | null>(null)
+  const [isDeployed, setIsDeployed] = useState(false)
+
+  useEffect(() => {
+    const savedPantryUrl = localStorage.getItem("sparrow_pantry_url")
+    const savedAutoSync = localStorage.getItem("sparrow_auto_sync") === "true"
+
+    if (savedPantryUrl) {
+      setPantryUrl(savedPantryUrl)
+      setIsPantryConnected(true)
+      setAutoSyncEnabled(savedAutoSync)
+    }
+
+    const handleResetCloudConnection = () => {
+      // Reset all cloud connection state for new chat
+      localStorage.removeItem("sparrow_pantry_url")
+      localStorage.removeItem("sparrow_auto_sync")
+      setPantryUrl("")
+      setIsPantryConnected(false)
+      setAutoSyncEnabled(false)
+      setDeployUrl(null)
+      setIsDeployed(false)
+      setPantryStatus("New chat - cloud connection reset")
+      setTimeout(() => setPantryStatus(""), 3000)
+    }
+
+    window.addEventListener("resetCloudConnection", handleResetCloudConnection)
+
+    return () => {
+      window.removeEventListener("resetCloudConnection", handleResetCloudConnection)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (autoSyncEnabled && isPantryConnected && currentProject && currentProject.files.length > 0) {
+      const autoSaveTimer = setTimeout(() => {
+        saveToPantry(true) // Silent auto-save
+      }, 2000) // Auto-save 2 seconds after changes
+
+      return () => clearTimeout(autoSaveTimer)
+    }
+  }, [currentProject, autoSyncEnabled, isPantryConnected])
+
+  const validatePantryUrl = (url: string) => {
+    const pantryPattern = /^https:\/\/getpantry\.cloud\/apiv1\/pantry\/[a-f0-9-]+\/basket\/[a-zA-Z0-9]+$/
+    return pantryPattern.test(url)
+  }
+
+  const connectToPantry = async () => {
+    if (!pantryUrl || !validatePantryUrl(pantryUrl)) {
+      setPantryStatus("Invalid Pantry URL format")
+      return
+    }
+
+    setPantryStatus("Testing connection...")
+
+    try {
+      // Test connection by trying to read from the basket
+      const response = await fetch(pantryUrl, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
+
+      if (response.ok || response.status === 404) {
+        // 404 is OK for empty baskets
+        localStorage.setItem("sparrow_pantry_url", pantryUrl)
+        setIsPantryConnected(true)
+        setIsShowingPantrySetup(false)
+        setPantryStatus("Connected to Pantry successfully!")
+        setTimeout(() => setPantryStatus(""), 3000)
+      } else {
+        setPantryStatus("Failed to connect to Pantry. Please check your URL.")
+      }
+    } catch (error) {
+      setPantryStatus("Connection failed. Please check your internet connection.")
+    }
+  }
+
+  const disconnectFromPantry = () => {
+    localStorage.removeItem("sparrow_pantry_url")
+    localStorage.removeItem("sparrow_auto_sync")
+    setPantryUrl("")
+    setIsPantryConnected(false)
+    setAutoSyncEnabled(false)
+    setPantryStatus("Disconnected from Pantry")
+    setTimeout(() => setPantryStatus(""), 3000)
+  }
+
+  const toggleAutoSync = () => {
+    const newAutoSync = !autoSyncEnabled
+    setAutoSyncEnabled(newAutoSync)
+    localStorage.setItem("sparrow_auto_sync", newAutoSync.toString())
+    setPantryStatus(newAutoSync ? "Auto-sync enabled" : "Auto-sync disabled")
+    setTimeout(() => setPantryStatus(""), 2000)
+  }
+
+  const saveToPantry = async (silent = false) => {
+    if (!currentProject || !isPantryConnected) {
+      if (!silent) setPantryStatus("No project or Pantry connection")
+      return
+    }
+
+    setIsSavingToPantry(true)
+    if (!silent) setPantryStatus("Saving to Pantry...")
+
+    try {
+      const projectData = {
+        ...currentProject,
+        lastSynced: new Date().toISOString(),
+        syncedBy: "sparrow-ai",
+      }
+
+      const response = await fetch(pantryUrl, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(projectData),
+      })
+
+      if (response.ok) {
+        if (!silent) {
+          setPantryStatus("Project saved to Pantry successfully!")
+          setTimeout(() => setPantryStatus(""), 3000)
+        }
+      } else {
+        setPantryStatus("Failed to save to Pantry")
+        setTimeout(() => setPantryStatus(""), 3000)
+      }
+    } catch (error) {
+      setPantryStatus("Save failed. Check your connection.")
+      setTimeout(() => setPantryStatus(""), 3000)
+    } finally {
+      setIsSavingToPantry(false)
+    }
+  }
+
+  const loadFromPantry = async () => {
+    if (!isPantryConnected) {
+      setPantryStatus("Not connected to Pantry")
+      return
+    }
+
+    setIsLoadingFromPantry(true)
+    setPantryStatus("Loading from Pantry...")
+
+    try {
+      const response = await fetch(pantryUrl, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
+
+      if (response.ok) {
+        const projectData = await response.json()
+
+        // Convert dates back to Date objects
+        const project: Project = {
+          ...projectData,
+          createdAt: new Date(projectData.createdAt),
+          lastModified: new Date(projectData.lastModified),
+          files: projectData.files.map((f: any) => ({
+            ...f,
+            lastModified: new Date(f.lastModified),
+          })),
+        }
+
+        onProjectUpdate(project)
+        setPantryStatus("Project loaded from Pantry successfully!")
+        setTimeout(() => setPantryStatus(""), 3000)
+      } else if (response.status === 404) {
+        setPantryStatus("No project found in Pantry")
+        setTimeout(() => setPantryStatus(""), 3000)
+      } else {
+        setPantryStatus("Failed to load from Pantry")
+        setTimeout(() => setPantryStatus(""), 3000)
+      }
+    } catch (error) {
+      setPantryStatus("Load failed. Check your connection.")
+      setTimeout(() => setPantryStatus(""), 3000)
+    } finally {
+      setIsLoadingFromPantry(false)
+    }
+  }
+
+  const generateDeployUrl = () => {
+    if (!currentProject || !isPantryConnected) return null
+
+    // Create a unique deploy URL based on project and pantry
+    const projectSlug = currentProject.name.toLowerCase().replace(/[^a-z0-9]/g, "-")
+    const pantryId = pantryUrl.split("/pantry/")[1]?.split("/")[0]
+    const basketName = pantryUrl.split("/basket/")[1]
+
+    return `${window.location.origin}/deploy/${pantryId}/${basketName}/${projectSlug}`
+  }
+
+  const deployToSparrow = async () => {
+    if (!currentProject || !isPantryConnected) {
+      setPantryStatus("Need project and Pantry connection to deploy")
+      return
+    }
+
+    setPantryStatus("Deploying project...")
+
+    // First save to Pantry
+    await saveToPantry()
+
+    const generatedUrl = generateDeployUrl()
+    if (generatedUrl) {
+      setDeployUrl(generatedUrl)
+      setIsDeployed(true)
+      setPantryStatus("Project deployed successfully!")
+      setTimeout(() => setPantryStatus(""), 3000)
+    }
+  }
 
   const startEditing = () => {
     if (currentProject) {
@@ -155,274 +374,6 @@ export function ProjectManager({ currentProject, onProjectCreate, onProjectUpdat
     }
   }
 
-  const deployToNetlify = async () => {
-    if (!currentProject || currentProject.files.length === 0) {
-      alert("No project files to deploy!")
-      return
-    }
-
-    setIsDeploying(true)
-    setDeploymentStatus("Starting deployment...")
-    setDeploymentUrl(null)
-
-    try {
-      let accessToken = localStorage.getItem("netlify_access_token")
-
-      if (!accessToken) {
-        setDeploymentStatus("Authenticating with Netlify...")
-        try {
-          accessToken = await authenticateWithNetlify()
-        } catch (oauthError) {
-          console.log("[v0] OAuth failed, falling back to manual token:", oauthError)
-          setDeploymentStatus("OAuth failed, requesting manual token...")
-
-          // Fallback to manual token approach
-          const token = prompt(
-            "OAuth authentication failed. Please enter your Netlify Personal Access Token:\n\n" +
-              "1. Go to https://app.netlify.com/user/applications#personal-access-tokens\n" +
-              "2. Click 'New access token'\n" +
-              "3. Give it a name and copy the token\n" +
-              "4. Paste it here:",
-          )
-
-          if (!token) {
-            throw new Error("Access token required for deployment")
-          }
-
-          accessToken = token.trim()
-          localStorage.setItem("netlify_access_token", accessToken)
-        }
-      }
-
-      setDeploymentStatus("Preparing files for deployment...")
-      const files: { [key: string]: string } = {}
-      let hasHtmlFile = false
-
-      currentProject.files.forEach((file) => {
-        files[file.name] = file.content
-        if (file.name.toLowerCase().includes(".html") || file.name === "index.html") {
-          hasHtmlFile = true
-        }
-        console.log(`[v0] Preparing file: ${file.name} (${file.content.length} characters)`)
-      })
-
-      if (!hasHtmlFile) {
-        console.warn("[v0] No HTML file found, deployment may not work properly")
-      }
-
-      const timestamp = Date.now()
-      const randomString = Math.random().toString(36).substring(2, 8)
-      const uniqueSubdomain =
-        `${currentProject.name.toLowerCase().replace(/[^a-z0-9]/g, "-")}-${timestamp}-${randomString}`.substring(0, 63)
-
-      setDeploymentStatus("Creating site on Netlify...")
-      console.log("[v0] Creating site with unique subdomain:", uniqueSubdomain)
-
-      const deployResponse = await fetch("https://api.netlify.com/api/v1/sites", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: uniqueSubdomain,
-        }),
-      })
-
-      if (!deployResponse.ok) {
-        const errorText = await deployResponse.text()
-        console.error("[v0] Site creation failed:", errorText)
-        throw new Error(`Failed to create site: ${errorText}`)
-      }
-
-      const siteData = await deployResponse.json()
-      const siteId = siteData.id
-      console.log("[v0] Site created successfully:", siteId)
-
-      setDeploymentStatus("Uploading files to site...")
-      const fileDeployResponse = await fetch(`https://api.netlify.com/api/v1/sites/${siteId}/deploys`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          files: files,
-        }),
-      })
-
-      if (!fileDeployResponse.ok) {
-        const errorText = await fileDeployResponse.text()
-        console.error("[v0] File deployment failed:", errorText)
-        throw new Error(`Failed to deploy files: ${errorText}`)
-      }
-
-      const deployData = await fileDeployResponse.json()
-      console.log("[v0] Deploy data:", deployData)
-
-      setDeploymentStatus("Finalizing deployment...")
-
-      // Wait a bit for the deployment to propagate
-      await new Promise((resolve) => setTimeout(resolve, 3000))
-
-      const siteUrl = siteData.ssl_url || siteData.url
-      console.log("[v0] Deployment successful:", siteUrl)
-
-      setDeploymentStatus("Verifying site accessibility...")
-      try {
-        const testResponse = await fetch(siteUrl, { method: "HEAD", mode: "no-cors" })
-        console.log("[v0] Site accessibility test completed")
-      } catch (e) {
-        console.log("[v0] Site accessibility test failed (expected for CORS), but site should be live")
-      }
-
-      setDeploymentUrl(siteUrl)
-      setDeploymentStatus("Deployment completed successfully!")
-
-      alert(
-        `🎉 Successfully deployed to Netlify!\n\n` +
-          `Site URL: ${siteUrl}\n\n` +
-          `Note: It may take 1-2 minutes for the site to be fully accessible. ` +
-          `If you get a "Site not found" error, please wait a moment and try again.`,
-      )
-    } catch (error) {
-      console.error("Deployment error:", error)
-      setDeploymentStatus("Deployment failed")
-
-      if (error instanceof Error && error.message.includes("401")) {
-        localStorage.removeItem("netlify_access_token")
-        alert("Invalid access token. Please try again with a valid token.")
-      } else {
-        alert(`Deployment failed: ${error instanceof Error ? error.message : "Unknown error"}`)
-      }
-    } finally {
-      setIsDeploying(false)
-      // Clear status after a delay
-      setTimeout(() => setDeploymentStatus(""), 5000)
-    }
-  }
-
-  const authenticateWithNetlify = async (): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const redirectUri = window.location.origin
-      const authUrl = `https://app.netlify.com/authorize?client_id=${NETLIFY_CONFIG.clientId}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}`
-
-      console.log("[v0] Opening OAuth URL:", authUrl)
-
-      // Check if we're already in an OAuth callback
-      const urlParams = new URLSearchParams(window.location.search)
-      const code = urlParams.get("code")
-      const error = urlParams.get("error")
-
-      if (code) {
-        // We're in the OAuth callback, exchange code for token
-        console.log("[v0] Found OAuth code in URL, exchanging for token")
-        exchangeCodeForToken(code, redirectUri).then(resolve).catch(reject)
-        return
-      }
-
-      if (error) {
-        reject(new Error(`OAuth error: ${error}`))
-        return
-      }
-
-      // Open OAuth in same window instead of popup to avoid issues
-      const shouldUsePopup = confirm(
-        "This will open Netlify authentication. Choose:\n\n" +
-          "OK - Open in popup (recommended)\n" +
-          "Cancel - Open in same tab (fallback)",
-      )
-
-      if (shouldUsePopup) {
-        // Try popup approach
-        const popup = window.open(authUrl, "netlify-oauth", "width=600,height=700,scrollbars=yes,resizable=yes")
-
-        if (!popup) {
-          reject(new Error("Popup blocked. Please allow popups and try again."))
-          return
-        }
-
-        const checkCallback = setInterval(() => {
-          try {
-            if (popup.closed) {
-              clearInterval(checkCallback)
-              reject(new Error("OAuth cancelled by user"))
-              return
-            }
-
-            // Try to read the popup URL (will fail due to CORS until redirect)
-            try {
-              const popupUrl = popup.location.href
-              if (popupUrl.includes("code=")) {
-                const popupParams = new URLSearchParams(popup.location.search)
-                const authCode = popupParams.get("code")
-                if (authCode) {
-                  clearInterval(checkCallback)
-                  popup.close()
-                  exchangeCodeForToken(authCode, redirectUri).then(resolve).catch(reject)
-                  return
-                }
-              }
-            } catch (e) {
-              // Expected CORS error, continue checking
-            }
-          } catch (e) {
-            // Continue checking
-          }
-        }, 1000)
-      } else {
-        // Fallback: redirect in same window
-        window.location.href = authUrl
-      }
-    })
-  }
-
-  const exchangeCodeForToken = async (code: string, redirectUri: string): Promise<string> => {
-    try {
-      console.log("[v0] Exchanging code for token")
-
-      const tokenResponse = await fetch("https://api.netlify.com/oauth/token", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: new URLSearchParams({
-          grant_type: "authorization_code",
-          code: code,
-          client_id: NETLIFY_CONFIG.clientId,
-          client_secret: "AemC6v6hW-Cly5AVwX8A2gPoFg1CJEazqlPT3sWNkGw",
-          redirect_uri: redirectUri,
-        }),
-      })
-
-      if (!tokenResponse.ok) {
-        const errorText = await tokenResponse.text()
-        console.error("[v0] Token exchange failed:", errorText)
-        throw new Error(`Token exchange failed: ${errorText}`)
-      }
-
-      const tokenData = await tokenResponse.json()
-      const accessToken = tokenData.access_token
-
-      if (!accessToken) {
-        throw new Error("No access token received")
-      }
-
-      console.log("[v0] Successfully obtained access token")
-      localStorage.setItem("netlify_access_token", accessToken)
-
-      if (window.location.search.includes("code=")) {
-        const cleanUrl = window.location.origin + window.location.pathname
-        window.history.replaceState({}, document.title, cleanUrl)
-      }
-
-      return accessToken
-    } catch (error) {
-      console.error("[v0] Token exchange error:", error)
-      throw error
-    }
-  }
-
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -442,10 +393,94 @@ export function ProjectManager({ currentProject, onProjectCreate, onProjectUpdat
               <Upload className="w-4 h-4 mr-2" />
               Import
             </Button>
+            <Button
+              onClick={() => setIsShowingPantrySetup(!isShowingPantrySetup)}
+              variant="outline"
+              className={`border-gray-600 text-white bg-transparent ${isPantryConnected ? "border-green-600 text-green-400" : ""}`}
+            >
+              {isPantryConnected ? <Cloud className="w-4 h-4 mr-2" /> : <CloudOff className="w-4 h-4 mr-2" />}
+              {isPantryConnected ? "Cloud Connected" : "Connect Cloud"}
+            </Button>
           </div>
         </div>
 
         <Separator className="bg-gray-700" />
+
+        {isShowingPantrySetup && (
+          <Card className="bg-gray-800 border-gray-700">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center">
+                <Settings className="w-5 h-5 mr-2" />
+                Cloud Storage Settings
+              </CardTitle>
+              <CardDescription className="text-gray-400">
+                Connect to Pantry for cloud storage and deployment
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {!isPantryConnected ? (
+                <>
+                  <div>
+                    <Label htmlFor="pantry-url" className="text-white">
+                      Pantry Basket URL
+                    </Label>
+                    <Input
+                      id="pantry-url"
+                      value={pantryUrl}
+                      onChange={(e) => setPantryUrl(e.target.value)}
+                      placeholder="https://getpantry.cloud/apiv1/pantry/YOUR_ID/basket/YOUR_BASKET"
+                      className="bg-gray-900 border-gray-600 text-white"
+                    />
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Button onClick={connectToPantry} className="bg-green-600 hover:bg-green-700 text-white">
+                      <Cloud className="w-4 h-4 mr-2" />
+                      Connect to Pantry
+                    </Button>
+                    <Button
+                      onClick={() => setIsShowingPantrySetup(false)}
+                      variant="outline"
+                      className="border-gray-600 text-white"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-green-400 flex items-center">
+                      <Cloud className="w-4 h-4 mr-2" />
+                      Connected to Pantry
+                    </span>
+                    <Button
+                      onClick={disconnectFromPantry}
+                      variant="outline"
+                      className="border-red-600 text-red-400 hover:bg-red-600 hover:text-white bg-transparent"
+                      size="sm"
+                    >
+                      Disconnect
+                    </Button>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-white">Auto-sync changes</span>
+                    <Button
+                      onClick={toggleAutoSync}
+                      variant="outline"
+                      className={`${autoSyncEnabled ? "border-green-600 text-green-400" : "border-gray-600 text-gray-400"} bg-transparent`}
+                      size="sm"
+                    >
+                      {autoSyncEnabled ? "Enabled" : "Disabled"}
+                    </Button>
+                  </div>
+                </div>
+              )}
+              {pantryStatus && (
+                <div className="text-sm text-blue-400 bg-blue-900/20 px-3 py-1 rounded">{pantryStatus}</div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Create New Project */}
         {isCreating && (
@@ -523,7 +558,12 @@ export function ProjectManager({ currentProject, onProjectCreate, onProjectUpdat
                     </div>
                   ) : (
                     <>
-                      <CardTitle className="text-white text-xl">{currentProject.name}</CardTitle>
+                      <CardTitle className="text-white text-xl flex items-center">
+                        {currentProject.name}
+                        {autoSyncEnabled && isPantryConnected && (
+                          <Cloud className="w-4 h-4 ml-2 text-green-400" title="Auto-sync enabled" />
+                        )}
+                      </CardTitle>
                       <CardDescription className="text-gray-400">
                         {currentProject.description || "No description"}
                       </CardDescription>
@@ -597,30 +637,39 @@ export function ProjectManager({ currentProject, onProjectCreate, onProjectUpdat
 
               {/* Project Actions */}
               <div className="flex flex-wrap gap-2">
-                <Button
-                  onClick={deployToNetlify}
-                  disabled={isDeploying || !currentProject?.files.length}
-                  className="bg-green-600 hover:bg-green-700 text-white"
-                  size="sm"
-                >
-                  <Globe className="w-4 h-4 mr-2" />
-                  {isDeploying ? "Deploying..." : "Deploy to Netlify"}
-                </Button>
+                {isPantryConnected && (
+                  <>
+                    <Button
+                      onClick={deployToSparrow}
+                      disabled={!currentProject?.files.length || isDeployed}
+                      className={`${isDeployed ? "bg-green-600 hover:bg-green-700" : "bg-purple-600 hover:bg-purple-700"} text-white`}
+                      size="sm"
+                    >
+                      <Globe className="w-4 h-4 mr-2" />
+                      {isDeployed ? "Deployed" : "Deploy with Sparrow"}
+                    </Button>
 
-                {deploymentStatus && (
-                  <div className="text-sm text-blue-400 bg-blue-900/20 px-3 py-1 rounded">{deploymentStatus}</div>
-                )}
+                    <Button
+                      onClick={() => saveToPantry()}
+                      disabled={isSavingToPantry || !currentProject?.files.length}
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                      size="sm"
+                    >
+                      <Cloud className="w-4 h-4 mr-2" />
+                      {isSavingToPantry ? "Saving..." : "Save to Cloud"}
+                    </Button>
 
-                {deploymentUrl && (
-                  <Button
-                    onClick={() => window.open(deploymentUrl, "_blank")}
-                    variant="outline"
-                    className="border-green-600 text-green-400 hover:bg-green-600 hover:text-white bg-transparent"
-                    size="sm"
-                  >
-                    <ExternalLink className="w-4 h-4 mr-2" />
-                    View Live Site
-                  </Button>
+                    <Button
+                      onClick={loadFromPantry}
+                      disabled={isLoadingFromPantry}
+                      variant="outline"
+                      className="border-blue-600 text-blue-400 hover:bg-blue-600 hover:text-white bg-transparent"
+                      size="sm"
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      {isLoadingFromPantry ? "Loading..." : "Load from Cloud"}
+                    </Button>
+                  </>
                 )}
 
                 <Button
@@ -661,6 +710,47 @@ export function ProjectManager({ currentProject, onProjectCreate, onProjectUpdat
                   Clear Project
                 </Button>
               </div>
+
+              {/* Deploy URL */}
+              {deployUrl && (
+                <div className="bg-green-900/20 border border-green-600 rounded p-3 space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <Globe className="w-4 h-4 text-green-400" />
+                    <span className="text-green-400 font-medium">Deploy URL:</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="text"
+                      value={deployUrl}
+                      readOnly
+                      className="flex-1 bg-gray-900 border border-gray-600 rounded px-3 py-1 text-white text-sm"
+                    />
+                    <Button
+                      onClick={() => {
+                        navigator.clipboard.writeText(deployUrl)
+                        setPantryStatus("URL copied to clipboard!")
+                        setTimeout(() => setPantryStatus(""), 2000)
+                      }}
+                      size="sm"
+                      variant="outline"
+                      className="border-green-600 text-green-400 hover:bg-green-600 hover:text-white bg-transparent"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      onClick={() => window.open(deployUrl, "_blank")}
+                      size="sm"
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      <Globe className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {pantryStatus && (
+                <div className="text-sm text-blue-400 bg-blue-900/20 px-3 py-1 rounded">{pantryStatus}</div>
+              )}
             </CardContent>
           </Card>
         )}
@@ -683,6 +773,17 @@ export function ProjectManager({ currentProject, onProjectCreate, onProjectUpdat
                   <Upload className="w-4 h-4 mr-2" />
                   Import Project
                 </Button>
+                {isPantryConnected && (
+                  <Button
+                    onClick={loadFromPantry}
+                    disabled={isLoadingFromPantry}
+                    variant="outline"
+                    className="border-blue-600 text-blue-400 hover:bg-blue-600 hover:text-white bg-transparent"
+                  >
+                    <Cloud className="w-4 h-4 mr-2" />
+                    {isLoadingFromPantry ? "Loading..." : "Load from Cloud"}
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>

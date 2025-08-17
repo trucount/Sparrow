@@ -3,8 +3,6 @@
 import { useState, useEffect } from "react"
 import dynamic from "next/dynamic"
 
-// export const dynamic = "force-dynamic" // Removed to avoid redeclaration
-
 const LoadingScreen = dynamic(
   () => import("@/components/loading-screen").then((mod) => ({ default: mod.LoadingScreen })),
   { ssr: false },
