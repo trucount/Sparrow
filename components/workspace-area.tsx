@@ -153,12 +153,10 @@ document.addEventListener('DOMContentLoaded', function() {
       addOrUpdateFile(filename, code, language)
     }
 
-    const handleCodeContentUpdate = (event: CustomEvent) => {
-      const { htmlContent, cssContent, jsContent } = event.detail
-
-      if (htmlContent) updateSpecificFile("index.html", htmlContent, "html")
-      if (cssContent) updateSpecificFile("styles.css", cssContent, "css")
-      if (jsContent) updateSpecificFile("script.js", jsContent, "javascript")
+    const handleUpdateSpecificFile = (event: CustomEvent) => {
+      const { filename, content, language } = event.detail
+      console.log(`[v0] Updating specific file: ${filename}`)
+      updateSpecificFile(filename, content, language)
     }
 
     const handleCreateProjectFiles = (event: CustomEvent) => {
@@ -296,13 +294,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     window.addEventListener("codeGenerated", handleCodeGenerated as EventListener)
-    window.addEventListener("codeContentUpdate", handleCodeContentUpdate as EventListener)
+    window.addEventListener("updateSpecificFile", handleUpdateSpecificFile as EventListener)
     window.addEventListener("createProjectFiles", handleCreateProjectFiles as EventListener)
     window.addEventListener("createNewProject", handleCreateNewProject as EventListener)
 
     return () => {
       window.removeEventListener("codeGenerated", handleCodeGenerated as EventListener)
-      window.removeEventListener("codeContentUpdate", handleCodeContentUpdate as EventListener)
+      window.removeEventListener("updateSpecificFile", handleUpdateSpecificFile as EventListener)
       window.removeEventListener("createProjectFiles", handleCreateProjectFiles as EventListener)
       window.removeEventListener("createNewProject", handleCreateNewProject as EventListener)
     }
