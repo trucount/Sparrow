@@ -408,6 +408,131 @@ export function ChatSidebar() {
 
     // Wait 3 seconds then send to AI
     setTimeout(async () => {
+      setIsLoading(true)
+
+      try {
+        const apiKey = localStorage.getItem("sparrow_openrouter_key")
+
+        if (!apiKey) {
+          throw new Error("No API key found. Please refresh the page to set up your API key.")
+        }
+
+        const systemPrompt = `You are Sparrow, an AI coding assistant specialized in web development. You help users create complete web applications with HTML, CSS, and JavaScript.
+
+CRITICAL REQUIREMENTS - ALWAYS FOLLOW THIS EXACT FORMAT:
+
+1. FIRST: Provide a file structure section listing ALL files
+2. THEN: Provide complete code for each file with SPECIFIC FILENAMES
+
+FORMAT TEMPLATE:
+## File Structure
+- index.html (Main HTML file)
+- styles.css (CSS styling)  
+- script.js (JavaScript functionality)
+
+## Code Files
+
+\`\`\`html file="index.html"
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your App Title</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Complete HTML structure -->
+    <script src="script.js"></script>
+</body>
+</html>
+\`\`\`
+
+\`\`\`css file="styles.css"
+/* Complete CSS styles - make it visually appealing */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    line-height: 1.6;
+    color: #333;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    padding: 20px;
+}
+/* Include all necessary styles */
+\`\`\`
+
+\`\`\`javascript file="script.js"
+// Complete JavaScript functionality
+console.log('App loaded successfully!');
+
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM ready!');
+    
+    // Add interactive features
+    console.log('App is ready for interaction!');
+});
+
+// Include all necessary JavaScript
+\`\`\`
+
+MANDATORY RULES:
+- ALWAYS start with "## File Structure" section listing all files
+- ALWAYS include file="filename.ext" in each code block
+- Each code block should contain content ONLY for that specific file
+- Make CSS visually modern and appealing with gradients and animations
+- Add meaningful JavaScript interactivity and console logs
+- Provide complete, working code that can be previewed immediately
+- Use modern web development practices
+- If creating multiple HTML files, name them descriptively (e.g., about.html, contact.html)
+
+CRITICAL: Each code block must specify its target file using file="filename.ext" syntax.
+
+The system will create files from your structure, then populate each file with its specific content based on the filename in the code block.`
+
+        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "HTTP-Referer": window.location.origin,
+            "X-Title": "Sparrow AI",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: selectedModel,
+            messages: [
+              {
+                role: "system",
+                content: systemPrompt,
+              },
+              {
+                role: "user",
+                content: finalContent,
+              },
+            ],
+            temperature: 0.7,
+            max_tokens: 4000,
+          }),
+        })
+
+        if (!response.ok) {
+          const errorText = await response.text()
+          console.error("OpenRouter API error:", errorText)
+          throw new Error(`API error: ${response.status}`)
+        }
+
+        const data = await response.json()
+        const assistantContent = data.choices?.[0]?.message?.content || "No response received"
+
+        console.log("[v0] Full AI response:", assistantContent)
+
+        // Parse file structure first
+        const files = parseFileStructure(assistantContent)
+        if (files.length > 0) {
+          console.log("[v0] Creating file structure:", files)
+          triggerFileStructureCreation(files)
+
+          // Wait a bit for files to be created, then update content
+          setTimeout(() => {
             // Extract code blocks with specific filenames
             const codeBlocks = extractCodeContent(assistantContent)
             
