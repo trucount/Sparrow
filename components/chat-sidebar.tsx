@@ -41,7 +41,7 @@ export function ChatSidebar() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const availableModels = [
-    { id: "qwen/qwen3-coder:free", name: "Qwen3 Coder (Free)" },
+    { id: "z-ai/glm-4.5-air:free", name: "Z-AI" },
     { id: "agentica-org/deepcoder-14b-preview:free", name: "Agentica Deepcoder 14B (Free)" },
   ]
 
