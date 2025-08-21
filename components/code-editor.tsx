@@ -5,7 +5,7 @@ import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Input } from "@/components/ui/input"
-import { File, FileText, Globe, Palette, Settings, Copy, Download, Trash2, Edit3, Plus, Save, X } from "lucide-react"
+import { File, FileText, Globe, Palette, Settings, Copy, Download, Trash2, Edit3, Plus, Save, X, Loader2, AlertCircle } from "lucide-react"
 import { Code } from "lucide-react"
 import type { ProjectFile } from "./workspace-area"
 

@@ -238,6 +238,101 @@ export function ChatSidebar() {
     })
   }
 
+  const requestMissingFileCode = async (filename: string, projectContext: any) => {
+    console.log(`[v0] Requesting missing code for: ${filename}`)
+    
+    try {
+      const apiKey = localStorage.getItem("sparrow_openrouter_key")
+      if (!apiKey) {
+        console.error("[v0] No API key found for missing file request")
+        return
+      }
+
+      const fileExtension = filename.split('.').pop()?.toLowerCase()
+      const fileType = fileExtension === 'html' ? 'HTML page' : 
+                     fileExtension === 'css' ? 'CSS stylesheet' :
+                     fileExtension === 'js' ? 'JavaScript file' : 'file'
+
+      const contextPrompt = `You are working on a web project with the following structure:
+
+PROJECT CONTEXT:
+- Project Name: ${projectContext.projectName || 'Web Application'}
+- Total Files: ${projectContext.totalFiles || 0}
+- Existing Files: ${projectContext.existingFiles?.join(', ') || 'None'}
+
+CURRENT PROJECT FILES CONTENT:
+${projectContext.filesContent || 'No existing content'}
+
+TASK: Generate ONLY the code for "${filename}" (${fileType}).
+
+CRITICAL REQUIREMENTS:
+1. Provide ONLY the code for ${filename}
+2. Make it work seamlessly with the existing project files
+3. Use the exact filename: ${filename}
+4. Ensure the code is complete and functional
+5. If it's an HTML file, include proper DOCTYPE and structure
+6. If it's a CSS file, include styles that complement the project
+7. If it's a JS file, include functionality that enhances the project
+
+Respond with ONLY the code block for this specific file:
+
+\`\`\`${fileExtension} file="${filename}"
+[YOUR CODE HERE]
+\`\`\``
+
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "HTTP-Referer": window.location.origin,
+          "X-Title": "Sparrow AI",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: selectedModel,
+          messages: [
+            {
+              role: "user",
+              content: contextPrompt,
+            },
+          ],
+          temperature: 0.7,
+          max_tokens: 2000,
+        }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        const assistantContent = data.choices?.[0]?.message?.content || ""
+        
+        console.log(`[v0] Received code for ${filename}:`, assistantContent.substring(0, 200))
+        
+        // Extract code blocks from the response
+        const codeBlocks = extractCodeContent(assistantContent)
+        
+        if (codeBlocks.length > 0) {
+          // Find the code block for our specific file
+          const targetBlock = codeBlocks.find(block => block.filename === filename)
+          if (targetBlock) {
+            triggerSpecificFileUpdate([targetBlock])
+            console.log(`[v0] Successfully updated missing file: ${filename}`)
+          } else {
+            // If no specific filename match, use the first code block
+            const firstBlock = codeBlocks[0]
+            triggerSpecificFileUpdate([{
+              filename: filename,
+              content: firstBlock.content,
+              language: firstBlock.language
+            }])
+            console.log(`[v0] Updated ${filename} with first available code block`)
+          }
+        }
+      }
+    } catch (error) {
+      console.error(`[v0] Error requesting code for ${filename}:`, error)
+    }
+  }
+
   const createNewSession = () => {
     const newSession: ChatSession = {
       id: Date.now().toString(),
@@ -658,6 +753,20 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   const currentSessionData = sessions.find((s) => s.id === currentSession)
+
+  // Listen for missing file requests
+  useEffect(() => {
+    const handleMissingFileRequest = async (event: CustomEvent) => {
+      const { filename, projectContext } = event.detail
+      await requestMissingFileCode(filename, projectContext)
+    }
+
+    window.addEventListener("requestMissingFile", handleMissingFileRequest as EventListener)
+
+    return () => {
+      window.removeEventListener("requestMissingFile", handleMissingFileRequest as EventListener)
+    }
+  }, [selectedModel])
 
   return (
     <div className="h-full flex flex-col">
