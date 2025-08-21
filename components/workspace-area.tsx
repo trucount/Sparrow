@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Eye, Code, Activity, Settings } from "lucide-react"
+import { Eye, Code, Activity, Settings, Loader2 } from "lucide-react"
 import { CodeEditor } from "./code-editor"
 import { PreviewPanel } from "./preview-panel"
 import { StatusPanel } from "./status-panel"
@@ -31,6 +31,8 @@ export function WorkspaceArea() {
   const [activeTab, setActiveTab] = useState("preview")
   const [currentProject, setCurrentProject] = useState<Project | null>(null)
   const [activeFileId, setActiveFileId] = useState<string | null>(null)
+  const [autoRequestStatus, setAutoRequestStatus] = useState<string>("")
+  const [isAutoRequesting, setIsAutoRequesting] = useState(false)
 
   const isFileBlankOrIncomplete = (file: ProjectFile): boolean => {
     const content = file.content.trim()
@@ -283,16 +285,10 @@ document.addEventListener('DOMContentLoaded', function() {
       
       console.log("[v0] Found missing/blank files:", missingFiles)
       
-      if (missingFiles.length > 0) {
-        setIsAutoRequesting(true)
-        setAutoRequestStatus(`Requesting code for ${missingFiles.length} incomplete file(s)...`)
-      }
-      
       // Request missing files one by one with delays
       missingFiles.forEach((filename, index) => {
         setTimeout(() => {
           console.log(`[v0] Requesting missing file: ${filename}`)
-          setAutoRequestStatus(`Requesting code for: ${filename}`)
           
           // Create enhanced project context
           const enhancedContext = {
@@ -316,14 +312,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
           })
           window.dispatchEvent(event)
-          
-          // Clear status after last request
-          if (index === missingFiles.length - 1) {
-            setTimeout(() => {
-              setIsAutoRequesting(false)
-              setAutoRequestStatus("")
-            }, 5000)
-          }
         }, (index * 3000) + 2000) // 3 second delay between requests, starting after 2 seconds
       })
     }
