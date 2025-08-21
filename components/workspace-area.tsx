@@ -283,10 +283,16 @@ document.addEventListener('DOMContentLoaded', function() {
       
       console.log("[v0] Found missing/blank files:", missingFiles)
       
+      if (missingFiles.length > 0) {
+        setIsAutoRequesting(true)
+        setAutoRequestStatus(`Requesting code for ${missingFiles.length} incomplete file(s)...`)
+      }
+      
       // Request missing files one by one with delays
       missingFiles.forEach((filename, index) => {
         setTimeout(() => {
           console.log(`[v0] Requesting missing file: ${filename}`)
+          setAutoRequestStatus(`Requesting code for: ${filename}`)
           
           // Create enhanced project context
           const enhancedContext = {
@@ -310,6 +316,14 @@ document.addEventListener('DOMContentLoaded', function() {
             }
           })
           window.dispatchEvent(event)
+          
+          // Clear status after last request
+          if (index === missingFiles.length - 1) {
+            setTimeout(() => {
+              setIsAutoRequesting(false)
+              setAutoRequestStatus("")
+            }, 5000)
+          }
         }, (index * 3000) + 2000) // 3 second delay between requests, starting after 2 seconds
       })
     }
