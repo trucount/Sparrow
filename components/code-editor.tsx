@@ -5,7 +5,7 @@ import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Input } from "@/components/ui/input"
-import { File, FileText, Globe, Palette, Settings, Copy, Download, Trash2, Edit3, Plus, Save, X, Loader2, AlertCircle } from "lucide-react"
+import { File, FileText, Globe, Palette, Settings, Copy, Download, Trash2, Edit3, Plus, Save, X } from "lucide-react"
 import { Code } from "lucide-react"
 import type { ProjectFile } from "./workspace-area"
 
@@ -254,17 +254,10 @@ export function CodeEditor({
                   <>
                     <button
                       onClick={() => onFileSelect(file.id)}
-                      className={`flex items-center space-x-2 flex-1 text-left ${
-                        isFileBlankOrIncomplete(file) ? 'opacity-60' : ''
-                      }`}
+                      className="flex items-center space-x-2 flex-1 text-left"
                     >
                       {getFileIcon(file.name)}
-                      <span className="truncate text-sm flex items-center">
-                        {file.name}
-                        {isFileBlankOrIncomplete(file) && (
-                          <AlertCircle className="w-3 h-3 ml-1 text-yellow-400" title="File is incomplete" />
-                        )}
-                      </span>
+                      <span className="truncate text-sm">{file.name}</span>
                     </button>
                     <div className="opacity-0 group-hover:opacity-100 flex items-center space-x-1">
                       <Button size="sm" variant="ghost" onClick={() => startRename(file)} className="p-1 h-6 w-6">

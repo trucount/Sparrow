@@ -41,7 +41,7 @@ export function ChatSidebar() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const availableModels = [
-    { id: "z-ai/glm-4.5-air:free", name: "Z-AI" },
+    { id: "qwen/qwen3-coder:free", name: "Qwen3 Coder (Free)" },
     { id: "agentica-org/deepcoder-14b-preview:free", name: "Agentica Deepcoder 14B (Free)" },
   ]
 
@@ -104,44 +104,62 @@ export function ChatSidebar() {
   }
 
   const extractCodeContent = (content: string) => {
-    // Parse individual code blocks with their specific filenames
-    const codeBlocks: Array<{ filename: string; content: string; language: string }> = []
-    
-    // Enhanced regex to capture filename from code blocks
-    const codeBlockRegex = /```(\w+)?\s*(?:file[=:]?\s*["']?([^"'\n]+)["']?)?\s*\n([\s\S]*?)```/g
-    let match
+    let htmlContent = ""
+    let cssContent = ""
+    let jsContent = ""
 
-    while ((match = codeBlockRegex.exec(content)) !== null) {
-      const language = match[1] || "text"
-      let filename = match[2]
-      const code = match[3].trim()
+    // Extract HTML content - look for both \`\`\`html and plain HTML blocks
+    const htmlRegex = /```html[\s\S]*?\n([\s\S]*?)```/gi
+    const htmlMatches = content.match(htmlRegex)
+    if (htmlMatches) {
+      htmlContent = htmlMatches
+        .map((match) =>
+          match
+            .replace(/```html[\s\S]*?\n/, "")
+            .replace(/```$/, "")
+            .trim(),
+        )
+        .join("\n\n")
+    }
 
-      // If no filename specified, try to infer from language and content
-      if (!filename) {
-        if (language === "html" || code.includes("<!DOCTYPE") || code.includes("<html")) {
-          filename = "index.html"
-        } else if (language === "css") {
-          filename = "styles.css"
-        } else if (language === "javascript" || language === "js") {
-          filename = "script.js"
-        } else {
-          filename = `untitled.${getFileExtension(language)}`
-        }
-      }
-
-      // Clean up filename
-      filename = filename.replace(/^["']|["']$/g, "")
-
-      if (code && filename) {
-        codeBlocks.push({
-          filename,
-          content: code,
-          language
-        })
+    // Also look for DOCTYPE declarations (likely HTML)
+    if (!htmlContent) {
+      const doctypeRegex = /<!DOCTYPE[\s\S]*?<\/html>/gi
+      const doctypeMatch = content.match(doctypeRegex)
+      if (doctypeMatch) {
+        htmlContent = doctypeMatch[0].trim()
       }
     }
 
-    return codeBlocks
+    // Extract CSS content
+    const cssRegex = /```css[\s\S]*?\n([\s\S]*?)```/gi
+    const cssMatches = content.match(cssRegex)
+    if (cssMatches) {
+      cssContent = cssMatches
+        .map((match) =>
+          match
+            .replace(/```css[\s\S]*?\n/, "")
+            .replace(/```$/, "")
+            .trim(),
+        )
+        .join("\n\n")
+    }
+
+    // Extract JavaScript content
+    const jsRegex = /```(?:javascript|js)[\s\S]*?\n([\s\S]*?)```/gi
+    const jsMatches = content.match(jsRegex)
+    if (jsMatches) {
+      jsContent = jsMatches
+        .map((match) =>
+          match
+            .replace(/```(?:javascript|js)[\s\S]*?\n/, "")
+            .replace(/```$/, "")
+            .trim(),
+        )
+        .join("\n\n")
+    }
+
+    return { htmlContent, cssContent, jsContent }
   }
 
   const removeCodeBlocks = (content: string): string => {
@@ -164,7 +182,22 @@ export function ChatSidebar() {
   }
 
   const triggerCodeContentUpdate = (htmlContent: string, cssContent: string, jsContent: string) => {
-    // This function is now deprecated - we use triggerSpecificFileUpdate instead
+    if (htmlContent || cssContent || jsContent) {
+      console.log("[v0] Updating code content:", {
+        html: htmlContent ? "Yes" : "No",
+        css: cssContent ? "Yes" : "No",
+        js: jsContent ? "Yes" : "No",
+      })
+
+      const event = new CustomEvent("codeContentUpdate", {
+        detail: {
+          htmlContent,
+          cssContent,
+          jsContent,
+        },
+      })
+      window.dispatchEvent(event)
+    }
   }
 
   const parseCodeBlocks = (content: string): CodeBlock[] => {
@@ -222,115 +255,6 @@ export function ChatSidebar() {
       })
       window.dispatchEvent(event)
     })
-  }
-
-  const triggerSpecificFileUpdate = (codeBlocks: Array<{ filename: string; content: string; language: string }>) => {
-    codeBlocks.forEach((block) => {
-      console.log(`[v0] Updating specific file: ${block.filename}`)
-      const event = new CustomEvent("updateSpecificFile", {
-        detail: {
-          filename: block.filename,
-          content: block.content,
-          language: block.language,
-        },
-      })
-      window.dispatchEvent(event)
-    })
-  }
-
-  const requestMissingFileCode = async (filename: string, projectContext: any) => {
-    console.log(`[v0] Requesting missing code for: ${filename}`)
-    
-    try {
-      const apiKey = localStorage.getItem("sparrow_openrouter_key")
-      if (!apiKey) {
-        console.error("[v0] No API key found for missing file request")
-        return
-      }
-
-      const fileExtension = filename.split('.').pop()?.toLowerCase()
-      const fileType = fileExtension === 'html' ? 'HTML page' : 
-                     fileExtension === 'css' ? 'CSS stylesheet' :
-                     fileExtension === 'js' ? 'JavaScript file' : 'file'
-
-      const contextPrompt = `You are working on a web project with the following structure:
-
-PROJECT CONTEXT:
-- Project Name: ${projectContext.projectName || 'Web Application'}
-- Total Files: ${projectContext.totalFiles || 0}
-- Existing Files: ${projectContext.existingFiles?.join(', ') || 'None'}
-
-CURRENT PROJECT FILES CONTENT:
-${projectContext.filesContent || 'No existing content'}
-
-TASK: Generate ONLY the code for "${filename}" (${fileType}).
-
-CRITICAL REQUIREMENTS:
-1. Provide ONLY the code for ${filename}
-2. Make it work seamlessly with the existing project files
-3. Use the exact filename: ${filename}
-4. Ensure the code is complete and functional
-5. If it's an HTML file, include proper DOCTYPE and structure
-6. If it's a CSS file, include styles that complement the project
-7. If it's a JS file, include functionality that enhances the project
-
-Respond with ONLY the code block for this specific file:
-
-\`\`\`${fileExtension} file="${filename}"
-[YOUR CODE HERE]
-\`\`\``
-
-      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "HTTP-Referer": window.location.origin,
-          "X-Title": "Sparrow AI",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: selectedModel,
-          messages: [
-            {
-              role: "user",
-              content: contextPrompt,
-            },
-          ],
-          temperature: 0.7,
-          max_tokens: 2000,
-        }),
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        const assistantContent = data.choices?.[0]?.message?.content || ""
-        
-        console.log(`[v0] Received code for ${filename}:`, assistantContent.substring(0, 200))
-        
-        // Extract code blocks from the response
-        const codeBlocks = extractCodeContent(assistantContent)
-        
-        if (codeBlocks.length > 0) {
-          // Find the code block for our specific file
-          const targetBlock = codeBlocks.find(block => block.filename === filename)
-          if (targetBlock) {
-            triggerSpecificFileUpdate([targetBlock])
-            console.log(`[v0] Successfully updated missing file: ${filename}`)
-          } else {
-            // If no specific filename match, use the first code block
-            const firstBlock = codeBlocks[0]
-            triggerSpecificFileUpdate([{
-              filename: filename,
-              content: firstBlock.content,
-              language: firstBlock.language
-            }])
-            console.log(`[v0] Updated ${filename} with first available code block`)
-          }
-        }
-      }
-    } catch (error) {
-      console.error(`[v0] Error requesting code for ${filename}:`, error)
-    }
   }
 
   const createNewSession = () => {
@@ -503,21 +427,17 @@ Respond with ONLY the code block for this specific file:
 
     // Wait 3 seconds then send to AI
     setTimeout(async () => {
-      setIsLoading(true)
+      const makeAPICall = async (retryCount = 0): Promise<any> => {
+        const maxRetries = 3
+        const baseDelay = 1000 // 1 second
 
-      try {
-        const apiKey = localStorage.getItem("sparrow_openrouter_key")
-
-        if (!apiKey) {
-          throw new Error("No API key found. Please refresh the page to set up your API key.")
-        }
-
-        const systemPrompt = `You are Sparrow, an AI coding assistant specialized in web development. You help users create complete web applications with HTML, CSS, and JavaScript.
+        try {
+          const systemPrompt = `You are Sparrow, an AI coding assistant specialized in web development. You help users create complete web applications with HTML, CSS, and JavaScript.
 
 CRITICAL REQUIREMENTS - ALWAYS FOLLOW THIS EXACT FORMAT:
 
 1. FIRST: Provide a file structure section listing ALL files
-2. THEN: Provide complete code for each file with SPECIFIC FILENAMES
+2. THEN: Provide complete code for each file
 
 FORMAT TEMPLATE:
 ## File Structure
@@ -527,7 +447,7 @@ FORMAT TEMPLATE:
 
 ## Code Files
 
-\`\`\`html file="index.html"
+\`\`\`html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -543,7 +463,7 @@ FORMAT TEMPLATE:
 </html>
 \`\`\`
 
-\`\`\`css file="styles.css"
+\`\`\`css
 /* Complete CSS styles - make it visually appealing */
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -556,7 +476,7 @@ body {
 /* Include all necessary styles */
 \`\`\`
 
-\`\`\`javascript file="script.js"
+\`\`\`javascript
 // Complete JavaScript functionality
 console.log('App loaded successfully!');
 
@@ -572,75 +492,120 @@ document.addEventListener('DOMContentLoaded', function() {
 
 MANDATORY RULES:
 - ALWAYS start with "## File Structure" section listing all files
-- ALWAYS include file="filename.ext" in each code block
-- Each code block should contain content ONLY for that specific file
+- ALWAYS include all three files (HTML, CSS, JS) even for simple requests
 - Make CSS visually modern and appealing with gradients and animations
 - Add meaningful JavaScript interactivity and console logs
 - Provide complete, working code that can be previewed immediately
+- Never skip any of the three file types
 - Use modern web development practices
-- If creating multiple HTML files, name them descriptively (e.g., about.html, contact.html)
 
-CRITICAL: Each code block must specify its target file using file="filename.ext" syntax.
+The system will first create all files from your structure, then populate them with your code.`
 
-The system will create files from your structure, then populate each file with its specific content based on the filename in the code block.`
+          const apiKey = localStorage.getItem("sparrow_openrouter_key")
+          if (!apiKey) {
+            throw new Error("No API key found. Please refresh the page to set up your API key.")
+          }
 
-        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            "HTTP-Referer": window.location.origin,
-            "X-Title": "Sparrow AI",
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: selectedModel,
-            messages: [
-              {
-                role: "system",
-                content: systemPrompt,
-              },
-              {
-                role: "user",
-                content: finalContent,
-              },
-            ],
-            temperature: 0.7,
-            max_tokens: 4000,
-          }),
-        })
+          const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${apiKey}`,
+              "HTTP-Referer": window.location.origin,
+              "X-Title": "Sparrow AI",
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: selectedModel,
+              messages: [
+                {
+                  role: "system",
+                  content: systemPrompt,
+                },
+                {
+                  role: "user",
+                  content: userMessage.content,
+                },
+              ],
+            }),
+          })
 
-        if (!response.ok) {
-          const errorText = await response.text()
-          console.error("OpenRouter API error:", errorText)
-          throw new Error(`API error: ${response.status}`)
+          if (response.status === 429) {
+            if (retryCount < maxRetries) {
+              const delay = baseDelay * Math.pow(2, retryCount)
+              console.log(`Rate limited. Retrying in ${delay}ms... (attempt ${retryCount + 1}/${maxRetries})`)
+
+              const rateLimitMessage: Message = {
+                id: (Date.now() + Math.random()).toString(),
+                role: "assistant",
+                content: `Rate limit reached. Retrying in ${delay / 1000} seconds... (attempt ${retryCount + 1}/${maxRetries})`,
+                timestamp: new Date(),
+              }
+
+              setSessions((prev) =>
+                prev.map((session) =>
+                  session.id === sessionId
+                    ? { ...session, messages: [...session.messages, rateLimitMessage] }
+                    : session,
+                ),
+              )
+
+              await new Promise((resolve) => setTimeout(resolve, delay))
+              return makeAPICall(retryCount + 1)
+            } else {
+              throw new Error("Rate limit exceeded. Please try again later.")
+            }
+          }
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`)
+          }
+
+          return await response.json()
+        } catch (error) {
+          if (retryCount < maxRetries && (error instanceof TypeError || error.message.includes("fetch"))) {
+            const delay = baseDelay * Math.pow(2, retryCount)
+            console.log(`Network error. Retrying in ${delay}ms... (attempt ${retryCount + 1}/${maxRetries})`)
+            await new Promise((resolve) => setTimeout(resolve, delay))
+            return makeAPICall(retryCount + 1)
+          }
+          throw error
+        }
+      }
+
+      try {
+        setIsLoading(true)
+        const data = await makeAPICall()
+
+        if (!data || !data.choices || !Array.isArray(data.choices) || data.choices.length === 0) {
+          console.error("Invalid API response structure:", data)
+          throw new Error("Invalid response from AI service")
         }
 
-        const data = await response.json()
-        const assistantContent = data.choices?.[0]?.message?.content || "No response received"
+        const choice = data.choices[0]
+        if (!choice || !choice.message || typeof choice.message.content !== "string") {
+          console.error("Invalid message structure:", choice)
+          throw new Error("Invalid message format from AI service")
+        }
 
-        console.log("[v0] Full AI response:", assistantContent)
+        const assistantContent = choice.message.content
 
-        // Parse file structure first
-        const files = parseFileStructure(assistantContent)
-        if (files.length > 0) {
-          console.log("[v0] Creating file structure:", files)
-          triggerFileStructureCreation(files)
+        const fileStructure = parseFileStructure(assistantContent)
+        if (fileStructure.length > 0) {
+          triggerFileStructureCreation(fileStructure)
 
-          // Wait a bit for files to be created, then update content
+          // Small delay to ensure files are created before content update
           setTimeout(() => {
-            // Extract code blocks with specific filenames
-            const codeBlocks = extractCodeContent(assistantContent)
-            
-            console.log("[v0] Code extraction results:", codeBlocks.map(block => `${block.filename} (${block.language})`))
-            
-            if (codeBlocks.length > 0) {
-              triggerSpecificFileUpdate(codeBlocks)
-            } else {
-              // Fallback: create default files if no specific code blocks found
-              const defaultBlocks = [
-                {
-                  filename: "index.html",
-                  content: `<!DOCTYPE html>
+            const { htmlContent, cssContent, jsContent } = extractCodeContent(assistantContent)
+
+            console.log("[v0] Code extraction results:", {
+              html: htmlContent ? "Found" : "Missing",
+              css: cssContent ? "Found" : "Missing",
+              js: jsContent ? "Found" : "Missing",
+            })
+
+            const finalHtmlContent =
+              htmlContent ||
+              `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -650,49 +615,411 @@ The system will create files from your structure, then populate each file with i
 </head>
 <body>
     <div id="app">
-        <h1>🐦 Welcome to Your Sparrow AI App</h1>
-        <p>This is a complete web application generated by Sparrow AI</p>
+        <header class="hero">
+            <h1>🐦 Welcome to Your Sparrow AI App</h1>
+            <p>This is a complete web application generated by Sparrow AI</p>
+        </header>
+        <main class="content">
+            <section class="features">
+                <h2>Features</h2>
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <h3>📱 Responsive Design</h3>
+                        <p>Works perfectly on all devices</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>🎨 Modern Styling</h3>
+                        <p>Beautiful gradients and animations</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>⚡ Interactive Elements</h3>
+                        <p>Engaging user interactions</p>
+                    </div>
+                </div>
+                <button id="demo-btn" class="cta-btn">Try Interactive Demo!</button>
+            </section>
+        </main>
+        <footer class="footer">
+            <p>&copy; 2024 Sparrow AI Generated App</p>
+        </footer>
     </div>
     <script src="script.js"></script>
 </body>
-</html>`,
-                  language: "html"
-                },
-                {
-                  filename: "styles.css",
-                  content: `/* Sparrow AI Generated Styles */
-body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+</html>`
+
+            const finalCssContent =
+              cssContent ||
+              `/* Sparrow AI Generated Styles */
+* {
     margin: 0;
-    padding: 20px;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    line-height: 1.6;
+    color: #333;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     min-height: 100vh;
-    color: #333;
+    overflow-x: hidden;
 }
 
 #app {
     max-width: 1200px;
     margin: 0 auto;
     background: rgba(255, 255, 255, 0.95);
-    padding: 40px;
+    backdrop-filter: blur(10px);
     border-radius: 20px;
     box-shadow: 0 25px 50px rgba(0,0,0,0.15);
-}`,
-                  language: "css"
-                },
-                {
-                  filename: "script.js",
-                  content: `// Sparrow AI Generated JavaScript
+    overflow: hidden;
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+
+.hero {
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+    color: white;
+    padding: 60px 40px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.hero::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="75" cy="75" r="1" fill="rgba(255,255,255,0.1)"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+    opacity: 0.3;
+}
+
+.hero h1 {
+    font-size: 3rem;
+    margin-bottom: 15px;
+    font-weight: 700;
+    position: relative;
+    z-index: 1;
+    animation: fadeInUp 0.8s ease;
+}
+
+.hero p {
+    font-size: 1.2rem;
+    opacity: 0.9;
+    position: relative;
+    z-index: 1;
+    animation: fadeInUp 0.8s ease 0.2s both;
+}
+
+.content {
+    padding: 60px 40px;
+}
+
+.features h2 {
+    color: #2c3e50;
+    margin-bottom: 40px;
+    font-size: 2.5rem;
+    text-align: center;
+    font-weight: 700;
+}
+
+.feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 30px;
+    margin-bottom: 50px;
+}
+
+.feature-card {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    padding: 30px;
+    border-radius: 15px;
+    text-align: center;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(0,0,0,0.1);
+}
+
+.feature-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+}
+
+.feature-card h3 {
+    color: #2c3e50;
+    margin-bottom: 15px;
+    font-size: 1.3rem;
+}
+
+.feature-card p {
+    color: #666;
+    line-height: 1.6;
+}
+
+.cta-btn {
+    display: block;
+    margin: 0 auto;
+    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+    color: white;
+    border: none;
+    padding: 15px 40px;
+    border-radius: 50px;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.cta-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 15px 30px rgba(52, 152, 219, 0.4);
+    background: linear-gradient(135deg, #2980b9 0%, #3498db 100%);
+}
+
+.cta-btn:active {
+    transform: translateY(-1px);
+}
+
+.footer {
+    background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
+    color: white;
+    padding: 30px;
+    text-align: center;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (max-width: 768px) {
+    #app {
+        margin: 10px;
+        border-radius: 15px;
+    }
+    
+    .hero {
+        padding: 40px 20px;
+    }
+    
+    .hero h1 {
+        font-size: 2rem;
+    }
+    
+    .content {
+        padding: 40px 20px;
+    }
+    
+    .feature-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    
+    .features h2 {
+        font-size: 2rem;
+    }
+}`
+
+            const finalJsContent =
+              jsContent ||
+              `// Sparrow AI Generated JavaScript
 console.log('🐦 Sparrow AI app loaded successfully!');
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM ready!');
-});`,
-                  language: "javascript"
-                }
-              ]
-              triggerSpecificFileUpdate(defaultBlocks)
+    console.log('DOM loaded, app ready!');
+    
+    // Add interactive button functionality
+    const demoBtn = document.getElementById('demo-btn');
+    if (demoBtn) {
+        let clickCount = 0;
+        const messages = [
+            'Great! Click again! 🎉',
+            'Awesome! One more! ⭐',
+            'Perfect! You did it! 🚀',
+            'Amazing! Keep going! 💫',
+            'Fantastic! 🎊'
+        ];
+        
+        demoBtn.addEventListener('click', function() {
+            clickCount++;
+            
+            // Change button text and style based on clicks
+            if (clickCount <= messages.length) {
+                this.textContent = messages[clickCount - 1];
+                
+                // Cycle through different gradient colors
+                const gradients = [
+                    'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)',
+                    'linear-gradient(135deg, #f39c12 0%, #e67e22 100%)',
+                    'linear-gradient(135deg, #27ae60 0%, #229954 100%)',
+                    'linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%)',
+                    'linear-gradient(135deg, #1abc9c 0%, #16a085 100%)'
+                ];
+                
+                this.style.background = gradients[(clickCount - 1) % gradients.length];
+                
+                // Add celebration effect
+                createCelebration(this);
+                
+            } else {
+                // Reset after 5 clicks
+                this.textContent = 'Try Interactive Demo!';
+                this.style.background = 'linear-gradient(135deg, #3498db 0%, #2980b9 100%)';
+                clickCount = 0;
             }
+            
+            console.log(\`Button clicked \${clickCount} times! 🎯\`);
+        });
+        
+        // Add hover effects
+        demoBtn.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-3px) scale(1.05)';
+        });
+        
+        demoBtn.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(-3px) scale(1)';
+        });
+    }
+    
+    // Create celebration effect
+    function createCelebration(element) {
+        const rect = element.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        
+        for (let i = 0; i < 10; i++) {
+            setTimeout(() => {
+                const particle = document.createElement('div');
+                particle.style.cssText = \`
+                    position: fixed;
+                    width: 6px;
+                    height: 6px;
+                    background: \${['#e74c3c', '#f39c12', '#27ae60', '#3498db', '#9b59b6'][Math.floor(Math.random() * 5)]};
+                    border-radius: 50%;
+                    pointer-events: none;
+                    z-index: 1000;
+                    left: \${centerX}px;
+                    top: \${centerY}px;
+                \`;
+                
+                document.body.appendChild(particle);
+                
+                const angle = (Math.PI * 2 * i) / 10;
+                const velocity = 100 + Math.random() * 50;
+                const vx = Math.cos(angle) * velocity;
+                const vy = Math.sin(angle) * velocity;
+                
+                let x = 0, y = 0;
+                const animate = () => {
+                    x += vx * 0.02;
+                    y += vy * 0.02 + 2; // gravity
+                    
+                    particle.style.transform = \`translate(\${x}px, \${y}px)\`;
+                    particle.style.opacity = Math.max(0, 1 - Math.abs(y) / 200);
+                    
+                    if (Math.abs(y) < 200) {
+                        requestAnimationFrame(animate);
+                    } else {
+                        particle.remove();
+                    }
+                };
+                
+                requestAnimationFrame(animate);
+            }, i * 50);
+        }
+    }
+    
+    // Add smooth scrolling for any anchor links
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+            e.preventDefault();
+            const target = document.querySelector(this.getAttribute('href'));
+            if (target) {
+                target.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }
+        });
+    });
+    
+    // Add entrance animation
+    const app = document.getElementById('app');
+    if (app) {
+        app.style.opacity = '0';
+        app.style.transform = 'translateY(30px) scale(0.95)';
+        
+        setTimeout(() => {
+            app.style.transition = 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1)';
+            app.style.opacity = '1';
+            app.style.transform = 'translateY(0) scale(1)';
+        }, 100);
+    }
+    
+    // Add parallax effect to hero section
+    const hero = document.querySelector('.hero');
+    if (hero) {
+        window.addEventListener('scroll', () => {
+            const scrolled = window.pageYOffset;
+            const rate = scrolled * -0.5;
+            hero.style.transform = \`translateY(\${rate}px)\`;
+        });
+    }
+});
+
+// Add some utility functions
+function showNotification(message, type = 'info') {
+    console.log(\`📢 \${type.toUpperCase()}: \${message}\`);
+    
+    const notification = document.createElement('div');
+    notification.textContent = message;
+    notification.style.cssText = \`
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+        color: white;
+        padding: 15px 25px;
+        border-radius: 10px;
+        z-index: 1000;
+        transition: all 0.3s ease;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        font-weight: 500;
+    \`;
+    
+    document.body.appendChild(notification);
+    
+    // Animate in
+    setTimeout(() => {
+        notification.style.transform = 'translateX(0)';
+        notification.style.opacity = '1';
+    }, 10);
+    
+    // Animate out
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        notification.style.transform = 'translateX(100%)';
+        setTimeout(() => notification.remove(), 300);
+    }, 4000);
+}
+
+// Initialize app
+setTimeout(() => {
+    showNotification('🚀 Sparrow AI app initialized successfully!', 'success');
+}, 1000);`
+
+            triggerCodeContentUpdate(finalHtmlContent, finalCssContent, finalJsContent)
           }, 500)
         }
 
@@ -753,20 +1080,6 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   const currentSessionData = sessions.find((s) => s.id === currentSession)
-
-  // Listen for missing file requests
-  useEffect(() => {
-    const handleMissingFileRequest = async (event: CustomEvent) => {
-      const { filename, projectContext } = event.detail
-      await requestMissingFileCode(filename, projectContext)
-    }
-
-    window.addEventListener("requestMissingFile", handleMissingFileRequest as EventListener)
-
-    return () => {
-      window.removeEventListener("requestMissingFile", handleMissingFileRequest as EventListener)
-    }
-  }, [selectedModel])
 
   return (
     <div className="h-full flex flex-col">
