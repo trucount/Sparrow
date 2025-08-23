@@ -94,36 +94,6 @@ export function AboutPage() {
           </motion.p>
         </motion.section>
 
-        {/* Creator Section */}
-        <motion.section
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.8, duration: 1 }}
-          className="py-20"
-        >
-          <div className="bg-gradient-to-r from-gray-900/80 to-gray-800/80 backdrop-blur-sm border border-gray-700 rounded-3xl p-12 text-center">
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: 1, duration: 0.8 }}
-              className="mb-8"
-            >
-              <div className="w-24 h-24 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full mx-auto mb-6 flex items-center justify-center">
-                <User className="w-12 h-12 text-white" />
-              </div>
-              
-              <h2 className="text-3xl md:text-4xl font-bold mb-4 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                Built by Satvik Singh
-              </h2>
-              
-              <p className="text-lg text-gray-300 max-w-2xl mx-auto leading-relaxed">
-                A passionate developer and AI enthusiast who believes in the power of human-AI collaboration. 
-                Sparrow AI represents the perfect synergy between human creativity and artificial intelligence, 
-                designed to empower developers and bring ideas to life faster than ever before.
-              </p>
-            </motion.div>
-          </div>
-        </motion.section>
 
         {/* Stats Section */}
         <motion.section
