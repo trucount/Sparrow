@@ -16,17 +16,17 @@ export function AboutPage() {
     {
       year: "2024",
       title: "The Vision",
-      description: "Satvik Singh envisioned a platform where AI and human creativity could work together seamlessly"
-    },
-    {
-      year: "2024",
-      title: "Development Begins",
-      description: "Started building Sparrow AI with a focus on intuitive design and powerful AI integration"
+      description: "Satvik Singh envisioned a platform where AI and human creativity could work together seamlessly not just to code but more."
     },
     {
       year: "2025",
-      title: "Launch",
-      description: "Sparrow AI goes live, empowering developers worldwide with AI-powered code generation"
+      title: "Development Begins",
+      description: "Started building Sparrow AI with a focus on intuitive design and powerful AI integration by diving project into 9 modules"
+    },
+    {
+      year: "2025",
+      title: "Launch 1 Module",
+      description: "Sparrow AI goes live, empowering developers worldwide with AI-powered code generation in 1 st module"
     }
   ]
 
