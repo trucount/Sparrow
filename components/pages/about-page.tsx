@@ -206,7 +206,7 @@ export function AboutPage() {
 
           <div className="max-w-4xl mx-auto">
             {timeline.map((item, index) => (
-              <motion.div
+              
                 key={item.year}
                 initial={{ opacity: 0, x: index % 2 === 0 ? -50 : 50 }}
                 animate={{ opacity: 1, x: 0 }}
