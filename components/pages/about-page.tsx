@@ -7,9 +7,9 @@ import { User, Heart, Cpu, Code, Zap, Globe } from "lucide-react"
 export function AboutPage() {
   const stats = [
     { label: "AI Models", value: "50+", icon: Cpu },
-    { label: "Lines Generated", value: "1M+", icon: Code },
-    { label: "Projects Created", value: "10K+", icon: Globe },
-    { label: "Happy Developers", value: "5K+", icon: Heart },
+    { label: "Lines Generated", value: "10L+", icon: Code },
+    { label: "Projects Created", value: "100+", icon: Globe },
+    { label: "Errors Solved", value: "5k+", icon: Heart },
   ]
 
   const timeline = [
