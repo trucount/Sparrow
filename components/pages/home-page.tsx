@@ -14,7 +14,7 @@ export function HomePage({ onEnterApp }: HomePageProps) {
     {
       icon: Code,
       title: "AI Code Generation",
-      description: "Generate complete web applications with HTML, CSS, and JavaScript using advanced AI models",
+      description: "Generate complete websites with HTML, CSS, and JavaScript using advanced AI models",
       color: "from-blue-500 to-cyan-500"
     },
     {
