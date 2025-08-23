@@ -16,18 +16,21 @@ export function AboutPage() {
     {
       year: "2024",
       title: "The Vision",
-      description: "Envisioned a platform where AI and human creativity could work together seamlessly not just to code but more."
+      description:
+        "Envisioned a platform where AI and human creativity could work together seamlessly not just to code but more.",
     },
     {
       year: "2025",
       title: "Development Begins",
-      description: "Started building Sparrow AI with a focus on intuitive design and powerful AI integration by diving project into 9 modules"
+      description:
+        "Started building Sparrow AI with a focus on intuitive design and powerful AI integration by diving project into 9 modules",
     },
     {
       year: "2025",
       title: "Launch First Module",
-      description: "Sparrow AI goes live, empowering developers worldwide with AI-powered code generation in First module"
-    }
+      description:
+        "Sparrow AI goes live, empowering developers worldwide with AI-powered code generation in First module",
+    },
   ]
 
   return (
@@ -94,7 +97,6 @@ export function AboutPage() {
           </motion.p>
         </motion.section>
 
-
         {/* Stats Section */}
         <motion.section
           initial={{ opacity: 0 }}
@@ -150,13 +152,13 @@ export function AboutPage() {
             >
               <h3 className="text-2xl font-bold mb-6 text-blue-400">Human-AI Synergy</h3>
               <p className="text-lg text-gray-300 leading-relaxed mb-6">
-                We believe that the future of software development lies not in replacing human creativity, 
-                but in amplifying it. Sparrow AI is designed to be your intelligent coding companion, 
+                We believe that the future of software development lies not in replacing human creativity,
+                but in amplifying it. Sparrow AI is designed to be your intelligent coding companion,
                 understanding your vision and helping you bring it to life with unprecedented speed and precision.
               </p>
               <p className="text-lg text-gray-300 leading-relaxed">
-                Our platform combines the intuitive understanding of human needs with the computational 
-                power of advanced AI models, creating a development experience that feels natural, 
+                Our platform combines the intuitive understanding of human needs with the computational
+                power of advanced AI models, creating a development experience that feels natural,
                 efficient, and inspiring.
               </p>
             </motion.div>
@@ -206,21 +208,25 @@ export function AboutPage() {
 
           <div className="max-w-4xl mx-auto">
             {timeline.map((item, index) => (
-                <motion.div>
+              <motion.div
                 key={item.year}
                 initial={{ opacity: 0, x: index % 2 === 0 ? -50 : 50 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 2.4 + index * 0.2, duration: 0.8 }}
-                className={`flex items-center mb-12 ${index % 2 === 0 ? 'flex-row' : 'flex-row-reverse'}`}
+                className={`flex items-center mb-12 ${index % 2 === 0 ? "flex-row" : "flex-row-reverse"}`}
               >
                 <div className="flex-1">
-                  <div className={`bg-gray-900/50 backdrop-blur-sm border border-gray-700 rounded-2xl p-6 ${index % 2 === 0 ? 'mr-8' : 'ml-8'}`}>
+                  <div
+                    className={`bg-gray-900/50 backdrop-blur-sm border border-gray-700 rounded-2xl p-6 ${
+                      index % 2 === 0 ? "mr-8" : "ml-8"
+                    }`}
+                  >
                     <div className="text-blue-400 font-bold text-lg mb-2">{item.year}</div>
                     <h3 className="text-xl font-semibold text-white mb-3">{item.title}</h3>
                     <p className="text-gray-300 leading-relaxed">{item.description}</p>
                   </div>
                 </div>
-                
+
                 <div className="w-4 h-4 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex-shrink-0 relative">
                   <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full animate-ping opacity-30" />
                 </div>
