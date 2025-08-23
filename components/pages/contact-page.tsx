@@ -79,12 +79,14 @@ export function ContactPage() {
           className="py-20"
         >
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-            {/* Social Links instead of Contact Form */}
+            {/* Social Links */}
             <motion.div
               initial={{ opacity: 0, x: -50 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 1, duration: 0.8 }}
+              className="space-y-8"
             >
+              {/* Instagram + Linktree */}
               <Card className="bg-gray-900/50 backdrop-blur-sm border-gray-700">
                 <CardHeader>
                   <CardTitle className="text-white flex items-center text-2xl">
@@ -107,6 +109,35 @@ export function ContactPage() {
                   >
                     🔗 Linktree
                   </Button>
+                </CardContent>
+              </Card>
+
+              {/* Email Contact */}
+              <Card className="bg-gray-900/50 backdrop-blur-sm border-gray-700">
+                <CardHeader>
+                  <CardTitle className="text-white flex items-center text-xl">
+                    <Mail className="w-5 h-5 mr-3 text-green-400" />
+                    Email Us
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <p className="text-gray-300">
+                      For business inquiries, partnerships, or general questions:
+                    </p>
+                    <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-600">
+                      <div className="flex items-center justify-between">
+                        <span className="text-blue-400 font-mono text-lg">trucount.enterprises@gmail.com</span>
+                        <Button
+                          onClick={() => window.open("mailto:trucount.enterprises@gmail.com", "_blank")}
+                          size="sm"
+                          className="bg-green-600 hover:bg-green-700 text-white"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             </motion.div>
