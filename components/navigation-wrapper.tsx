@@ -10,11 +10,13 @@ import { LoadingScreen } from "./loading-screen"
 import { TermsAndConditions } from "./terms-and-conditions"
 import { ApiKeySetup } from "./api-key-setup"
 import { MainInterface } from "./main-interface"
+import { SparrowServices } from "./sparrow-services"
 
 export function NavigationWrapper() {
   const [currentPage, setCurrentPage] = useState("home")
   const [showTerms, setShowTerms] = useState(false)
   const [showApiKeySetup, setShowApiKeySetup] = useState(false)
+  const [showServices, setShowServices] = useState(false)
   const [showMainApp, setShowMainApp] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
@@ -50,7 +52,15 @@ export function NavigationWrapper() {
 
   const handleApiKeySubmitted = () => {
     setShowApiKeySetup(false)
-    setShowMainApp(true)
+    setShowServices(true)
+  }
+
+  const handleServiceSelected = (serviceId: string) => {
+    if (serviceId === "website-builder") {
+      setShowServices(false)
+      setShowMainApp(true)
+    }
+    // Add other service handlers here when they become available
   }
 
   if (!isMounted) {
@@ -67,6 +77,10 @@ export function NavigationWrapper() {
 
   if (showApiKeySetup) {
     return <ApiKeySetup onSubmit={handleApiKeySubmitted} />
+  }
+
+  if (showServices) {
+    return <SparrowServices onServiceSelect={handleServiceSelected} />
   }
 
   if (showMainApp) {
