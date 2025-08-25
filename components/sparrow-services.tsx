@@ -41,27 +41,82 @@ export function SparrowServices({ onServiceSelect }: SparrowServicesProps) {
 
   const services = [
     {
-      id: "html-website-coder",
-      title: "HTML Website Coder",
-      description: "Create complete websites with AI-powered code generation. Build responsive, modern web applications using HTML, CSS, and JavaScript with 50+ free AI models.",
+      id: "website-builder",
+      title: "Website Builder",
+      description: "Create stunning websites with AI-powered code generation. Build responsive, modern web applications with HTML, CSS, and JavaScript.",
       category: "web",
       status: "available",
       icon: Globe,
-      features: ["HTML/CSS/JS Generation", "Live Preview", "50+ Free AI Models", "Export & Deploy", "Real-time Editing"],
+      features: ["Responsive Design", "Live Preview", "50+ AI Models", "Export Code"],
       color: "from-blue-500 to-cyan-500",
       popularity: 5,
+    },
+    {
+      id: "mobile-app-builder",
+      title: "Mobile App Builder",
+      description: "Generate React Native and Flutter applications with AI assistance. Create cross-platform mobile apps effortlessly.",
+      category: "mobile",
+      status: "coming-soon",
+      icon: Smartphone,
+      features: ["Cross-Platform", "Native Performance", "UI Components", "App Store Ready"],
+      color: "from-green-500 to-emerald-500",
+      popularity: 4,
+    },
+    {
+      id: "ai-chatbot-builder",
+      title: "AI Chatbot Builder",
+      description: "Build intelligent chatbots and conversational AI interfaces with advanced natural language processing.",
+      category: "ai",
+      status: "coming-soon",
+      icon: Bot,
+      features: ["NLP Integration", "Custom Training", "Multi-Platform", "Analytics"],
+      color: "from-purple-500 to-pink-500",
+      popularity: 4,
+    },
+    {
+      id: "api-generator",
+      title: "API Generator",
+      description: "Generate RESTful APIs and GraphQL endpoints with automatic documentation and testing suites.",
+      category: "web",
+      status: "coming-soon",
+      icon: Database,
+      features: ["REST & GraphQL", "Auto Documentation", "Testing Suite", "Database Integration"],
+      color: "from-orange-500 to-red-500",
+      popularity: 3,
+    },
+    {
+      id: "ui-component-library",
+      title: "UI Component Library",
+      description: "Create custom UI component libraries with design systems and interactive documentation.",
+      category: "design",
+      status: "coming-soon",
+      icon: Palette,
+      features: ["Design System", "Interactive Docs", "Theme Support", "Export Options"],
+      color: "from-indigo-500 to-purple-500",
+      popularity: 4,
+    },
+    {
+      id: "automation-tools",
+      title: "Automation Tools",
+      description: "Build workflow automation and integration tools with AI-powered logic and decision making.",
+      category: "ai",
+      status: "coming-soon",
+      icon: Zap,
+      features: ["Workflow Builder", "AI Logic", "Integrations", "Scheduling"],
+      color: "from-yellow-500 to-orange-500",
+      popularity: 3,
     },
   ]
 
   const filteredServices = services.filter((service) => {
     const matchesSearch = service.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          service.description.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesCategory = selectedCategory === "all" || service.category === selectedCategory ||
-                           (selectedCategory === "web" && service.category === "web")
+    const matchesCategory = selectedCategory === "all" || service.category === selectedCategory
     return matchesSearch && matchesCategory
   })
 
   const availableServices = filteredServices.filter(s => s.status === "available")
+  const comingSoonServices = filteredServices.filter(s => s.status === "coming-soon")
 
   return (
     <div className="min-h-screen bg-black text-white overflow-hidden">
@@ -150,7 +205,7 @@ export function SparrowServices({ onServiceSelect }: SparrowServicesProps) {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-8 max-w-2xl mx-auto">
+            {/* Category Filters */}
             <div className="flex flex-wrap justify-center gap-3">
               {categories.map((category) => {
                 const Icon = category.icon
@@ -242,7 +297,7 @@ export function SparrowServices({ onServiceSelect }: SparrowServicesProps) {
                             </div>
                             
                             <Button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold transition-all duration-300 group-hover:shadow-lg group-hover:shadow-blue-500/25">
-                              Launch HTML Website Coder
+                              Launch Service
                               <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform duration-300" />
                             </Button>
                           </div>
@@ -255,6 +310,89 @@ export function SparrowServices({ onServiceSelect }: SparrowServicesProps) {
             </motion.section>
           )}
 
+          {/* Coming Soon Services */}
+          {comingSoonServices.length > 0 && (
+            <motion.section
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.8, duration: 0.8 }}
+            >
+              <div className="flex items-center space-x-3 mb-8">
+                <div className="w-3 h-3 bg-orange-400 rounded-full animate-pulse" />
+                <h3 className="text-2xl font-bold text-white">Coming Soon</h3>
+                <Badge className="bg-orange-600 text-white">
+                  {comingSoonServices.length} In Development
+                </Badge>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {comingSoonServices.map((service, index) => {
+                  const Icon = service.icon
+                  return (
+                    <motion.div
+                      key={service.id}
+                      initial={{ opacity: 0, y: 50 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 1 + index * 0.1, duration: 0.8 }}
+                      whileHover={{ scale: 1.02, y: -5 }}
+                      className="group"
+                    >
+                      <Card className="bg-gray-900/30 backdrop-blur-sm border-gray-700 h-full transition-all duration-300 hover:border-gray-600 hover:bg-gray-800/30 opacity-75">
+                        <CardHeader>
+                          <div className="flex items-start justify-between">
+                            <div className={`w-12 h-12 rounded-xl bg-gradient-to-r ${service.color} p-3 mb-4 opacity-60 group-hover:opacity-80 transition-opacity duration-300`}>
+                              <Icon className="w-full h-full text-white" />
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Badge variant="outline" className="border-orange-600 text-orange-400 bg-orange-900/20">
+                                Coming Soon
+                              </Badge>
+                              <div className="flex items-center space-x-1">
+                                {[...Array(service.popularity)].map((_, i) => (
+                                  <Star key={i} className="w-3 h-3 text-yellow-400 fill-current opacity-50" />
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <CardTitle className="text-white/80 group-hover:text-white transition-colors duration-300">
+                            {service.title}
+                          </CardTitle>
+                          <CardDescription className="text-gray-500 group-hover:text-gray-400 transition-colors duration-300">
+                            {service.description}
+                          </CardDescription>
+                        </CardHeader>
+                        
+                        <CardContent>
+                          <div className="space-y-4">
+                            <div className="flex flex-wrap gap-2">
+                              {service.features.map((feature) => (
+                                <Badge
+                                  key={feature}
+                                  variant="outline"
+                                  className="border-gray-700 text-gray-500 bg-gray-800/30"
+                                >
+                                  {feature}
+                                </Badge>
+                              ))}
+                            </div>
+                            
+                            <Button 
+                              disabled
+                              className="w-full bg-gray-700 text-gray-400 cursor-not-allowed"
+                            >
+                              <Clock className="w-4 h-4 mr-2" />
+                              Coming Soon
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  )
+                })}
+              </div>
+            </motion.section>
+          )}
 
           {/* No Results */}
           {filteredServices.length === 0 && (
@@ -283,15 +421,15 @@ export function SparrowServices({ onServiceSelect }: SparrowServicesProps) {
               <div className="flex items-center justify-center space-x-6 text-sm text-gray-400">
                 <div className="flex items-center space-x-2">
                   <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                  <span>{availableServices.length} Service Available</span>
+                  <span>{availableServices.length} Services Available</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-orange-400 rounded-full animate-pulse" />
+                  <span>{comingSoonServices.length} Coming Soon</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Zap className="w-4 h-4 text-blue-400" />
                   <span>Powered by 50+ AI Models</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Users className="w-4 h-4 text-purple-400" />
-                  <span>Built by Satvik Singh</span>
                 </div>
               </div>
               
