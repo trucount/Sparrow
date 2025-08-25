@@ -56,11 +56,15 @@ export function NavigationWrapper() {
   }
 
   const handleServiceSelected = (serviceId: string) => {
-    if (serviceId === "website-builder") {
+    if (serviceId === "html-website-coder") {
       setShowServices(false)
-      setShowMainApp(true)
+      setIsLoading(true)
+      
+      setTimeout(() => {
+        setIsLoading(false)
+        setShowMainApp(true)
+      }, 2000)
     }
-    // Add other service handlers here when they become available
   }
 
   if (!isMounted) {
