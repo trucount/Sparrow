@@ -10,16 +10,13 @@ import { SparrowLogo } from "./sparrow-logo"
 import { 
   Search, 
   Globe, 
-  Code, 
   Smartphone, 
   Database, 
   Palette, 
   Bot, 
   Zap, 
   ArrowRight,
-  Star,
   Clock,
-  Users,
   Sparkles
 } from "lucide-react"
 
@@ -49,7 +46,6 @@ export function SparrowServices({ onServiceSelect }: SparrowServicesProps) {
       icon: Globe,
       features: ["Responsive Design", "Live Preview", "50+ AI Models", "Export Code"],
       color: "from-blue-500 to-cyan-500",
-      popularity: 5,
     },
     {
       id: "mobile-app-builder",
@@ -60,7 +56,6 @@ export function SparrowServices({ onServiceSelect }: SparrowServicesProps) {
       icon: Smartphone,
       features: ["Cross-Platform", "Native Performance", "UI Components", "App Store Ready"],
       color: "from-green-500 to-emerald-500",
-      popularity: 4,
     },
     {
       id: "ai-chatbot-builder",
@@ -71,7 +66,6 @@ export function SparrowServices({ onServiceSelect }: SparrowServicesProps) {
       icon: Bot,
       features: ["NLP Integration", "Custom Training", "Multi-Platform", "Analytics"],
       color: "from-purple-500 to-pink-500",
-      popularity: 4,
     },
     {
       id: "api-generator",
@@ -82,7 +76,6 @@ export function SparrowServices({ onServiceSelect }: SparrowServicesProps) {
       icon: Database,
       features: ["REST & GraphQL", "Auto Documentation", "Testing Suite", "Database Integration"],
       color: "from-orange-500 to-red-500",
-      popularity: 3,
     },
     {
       id: "ui-component-library",
@@ -93,7 +86,6 @@ export function SparrowServices({ onServiceSelect }: SparrowServicesProps) {
       icon: Palette,
       features: ["Design System", "Interactive Docs", "Theme Support", "Export Options"],
       color: "from-indigo-500 to-purple-500",
-      popularity: 4,
     },
     {
       id: "automation-tools",
@@ -104,7 +96,6 @@ export function SparrowServices({ onServiceSelect }: SparrowServicesProps) {
       icon: Zap,
       features: ["Workflow Builder", "AI Logic", "Integrations", "Scheduling"],
       color: "from-yellow-500 to-orange-500",
-      popularity: 3,
     },
   ]
 
@@ -151,31 +142,25 @@ export function SparrowServices({ onServiceSelect }: SparrowServicesProps) {
           transition={{ duration: 0.8, ease: "easeOut" }}
           className="border-b border-gray-800 bg-black/80 backdrop-blur-lg"
         >
-          <div className="max-w-7xl mx-auto px-6 py-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <motion.div
-                  whileHover={{ scale: 1.1, rotate: 5 }}
-                  transition={{ type: "spring", stiffness: 300 }}
-                >
-                  <SparrowLogo size={48} />
-                </motion.div>
-                <div>
-                  <h1 className="text-3xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-                    Sparrow
-                  </h1>
-                  <p className="text-gray-400"></p>
-                </div>
+          <div className="max-w-7xl mx-auto px-6 py-10 text-center">
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.8 }}
+              className="mb-6 flex justify-center"
+            >
+              <div className="relative inline-block">
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full blur-3xl opacity-30 scale-150" />
+                <SparrowLogo size={80} className="relative z-10" />
               </div>
-              
-              <div className="flex items-center space-x-2 text-sm text-gray-400">
-                <Users className="w-4 h-4" />
-                <span></span>
-                <div className="w-1 h-1 bg-gray-600 rounded-full mx-2" />
-                <Star className="w-4 h-4 text-yellow-400" />
-                <span></span>
-              </div>
-            </div>
+            </motion.div>
+            
+            <h1 className="text-5xl md:text-6xl font-bold mb-4 bg-gradient-to-r from-white via-blue-200 to-purple-200 bg-clip-text text-transparent">
+              Sparrow AI
+            </h1>
+            <p className="text-gray-400 text-lg max-w-2xl mx-auto">
+              Explore our AI-powered tools and services designed to accelerate your workflow
+            </p>
           </div>
         </motion.header>
 
@@ -264,14 +249,7 @@ export function SparrowServices({ onServiceSelect }: SparrowServicesProps) {
                             <div className={`w-12 h-12 rounded-xl bg-gradient-to-r ${service.color} p-3 mb-4 group-hover:scale-110 transition-transform duration-300`}>
                               <Icon className="w-full h-full text-white" />
                             </div>
-                            <div className="flex items-center space-x-2">
-                              <Badge className="bg-green-600 text-white">Available</Badge>
-                              <div className="flex items-center space-x-1">
-                                {[...Array(service.popularity)].map((_, i) => (
-                                  <Star key={i} className="w-3 h-3 text-yellow-400 fill-current" />
-                                ))}
-                              </div>
-                            </div>
+                            <Badge className="bg-green-600 text-white">Available</Badge>
                           </div>
                           
                           <CardTitle className="text-white group-hover:text-blue-300 transition-colors duration-300">
@@ -343,16 +321,9 @@ export function SparrowServices({ onServiceSelect }: SparrowServicesProps) {
                             <div className={`w-12 h-12 rounded-xl bg-gradient-to-r ${service.color} p-3 mb-4 opacity-60 group-hover:opacity-80 transition-opacity duration-300`}>
                               <Icon className="w-full h-full text-white" />
                             </div>
-                            <div className="flex items-center space-x-2">
-                              <Badge variant="outline" className="border-orange-600 text-orange-400 bg-orange-900/20">
-                                Coming Soon
-                              </Badge>
-                              <div className="flex items-center space-x-1">
-                                {[...Array(service.popularity)].map((_, i) => (
-                                  <Star key={i} className="w-3 h-3 text-yellow-400 fill-current opacity-50" />
-                                ))}
-                              </div>
-                            </div>
+                            <Badge variant="outline" className="border-orange-600 text-orange-400 bg-orange-900/20">
+                              Coming Soon
+                            </Badge>
                           </div>
                           
                           <CardTitle className="text-white/80 group-hover:text-white transition-colors duration-300">
@@ -408,37 +379,6 @@ export function SparrowServices({ onServiceSelect }: SparrowServicesProps) {
             </motion.div>
           )}
         </div>
-
-        {/* Footer */}
-        <motion.footer
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.2, duration: 0.8 }}
-          className="border-t border-gray-800 bg-black/80 backdrop-blur-lg"
-        >
-          <div className="max-w-7xl mx-auto px-6 py-8">
-            <div className="text-center space-y-4">
-              <div className="flex items-center justify-center space-x-6 text-sm text-gray-400">
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                  <span>{availableServices.length} Services Available</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-orange-400 rounded-full animate-pulse" />
-                  <span>{comingSoonServices.length} Coming Soon</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Zap className="w-4 h-4 text-blue-400" />
-                  <span>Powered by 50+ AI Models</span>
-                </div>
-              </div>
-              
-              <p className="text-xs text-gray-500">
-                
-              </p>
-            </div>
-          </div>
-        </motion.footer>
       </div>
     </div>
   )
