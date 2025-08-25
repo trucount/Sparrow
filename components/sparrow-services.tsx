@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { SparrowLogo } from "./sparrow-logo"
 import { 
   Search, 
   Globe, 
@@ -134,9 +133,7 @@ export function SparrowServices({ onServiceSelect }: SparrowServicesProps) {
         ))}
       </div>
 
-    
-
-
+      <div className="relative z-10 min-h-screen flex flex-col">
         {/* Main Content */}
         <div className="flex-1 max-w-7xl mx-auto px-6 py-12 w-full">
           {/* Search and Categories */}
