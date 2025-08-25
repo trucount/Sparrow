@@ -16,7 +16,6 @@ export function NavigationWrapper() {
   const [currentPage, setCurrentPage] = useState("home")
   const [showTerms, setShowTerms] = useState(false)
   const [showApiKeySetup, setShowApiKeySetup] = useState(false)
-  const [showServices, setShowServices] = useState(false)
   const [showMainApp, setShowMainApp] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
@@ -27,10 +26,8 @@ export function NavigationWrapper() {
 
   const handleEnterApp = () => {
     setIsLoading(true)
-    
     setTimeout(() => {
       setIsLoading(false)
-      
       try {
         const savedApiKey = localStorage.getItem("sparrow_openrouter_key")
         if (savedApiKey) {
@@ -52,12 +49,12 @@ export function NavigationWrapper() {
 
   const handleApiKeySubmitted = () => {
     setShowApiKeySetup(false)
-    setShowServices(true)
+    // no longer control SparrowServices with showServices
+    setShowMainApp(true)
   }
 
   const handleServiceSelected = (serviceId: string) => {
     if (serviceId === "website-builder") {
-      setShowServices(false)
       setShowMainApp(true)
     }
     // Add other service handlers here when they become available
@@ -68,23 +65,39 @@ export function NavigationWrapper() {
   }
 
   if (isLoading) {
-    return <LoadingScreen />
+    return (
+      <>
+        <LoadingScreen />
+        <SparrowServices onServiceSelect={handleServiceSelected} />
+      </>
+    )
   }
 
   if (showTerms) {
-    return <TermsAndConditions onAccept={handleTermsAccepted} />
+    return (
+      <>
+        <TermsAndConditions onAccept={handleTermsAccepted} />
+        <SparrowServices onServiceSelect={handleServiceSelected} />
+      </>
+    )
   }
 
   if (showApiKeySetup) {
-    return <ApiKeySetup onSubmit={handleApiKeySubmitted} />
-  }
-
-  if (showServices) {
-    return <SparrowServices onServiceSelect={handleServiceSelected} />
+    return (
+      <>
+        <ApiKeySetup onSubmit={handleApiKeySubmitted} />
+        <SparrowServices onServiceSelect={handleServiceSelected} />
+      </>
+    )
   }
 
   if (showMainApp) {
-    return <MainInterface />
+    return (
+      <>
+        <MainInterface />
+        <SparrowServices onServiceSelect={handleServiceSelected} />
+      </>
+    )
   }
 
   const renderCurrentPage = () => {
@@ -110,6 +123,7 @@ export function NavigationWrapper() {
         onEnterApp={handleEnterApp}
       />
       {renderCurrentPage()}
+      <SparrowServices onServiceSelect={handleServiceSelected} />
     </div>
   )
 }
