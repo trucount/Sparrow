@@ -135,25 +135,7 @@ export function SparrowServices({ onServiceSelect }: SparrowServicesProps) {
       </div>
 
       <div className="relative z-10 min-h-screen flex flex-col">
-        {/* Header */}
-        <motion.header
-          initial={{ y: -100, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
-          className="border-b border-gray-800 bg-black/80 backdrop-blur-lg"
-        >
-          <div className="max-w-7xl mx-auto px-6 py-10 text-center">
-            <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.8 }}
-              className="mb-6 flex justify-center"
-            >
-              <div className="relative inline-block">
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full blur-3xl opacity-30 scale-150" />
-                <SparrowLogo size={80} className="relative z-10" />
-              </div>
-            </motion.div>
+       
             
             <h1 className="text-5xl md:text-6xl font-bold mb-4 bg-gradient-to-r from-white via-blue-200 to-purple-200 bg-clip-text text-transparent">
               Sparrow AI
