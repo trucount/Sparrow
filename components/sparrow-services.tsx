@@ -162,18 +162,18 @@ export function SparrowServices({ onServiceSelect }: SparrowServicesProps) {
                 </motion.div>
                 <div>
                   <h1 className="text-3xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-                    Sparrow Services
+                    Sparrow
                   </h1>
-                  <p className="text-gray-400">Choose your AI-powered development tool</p>
+                  <p className="text-gray-400"></p>
                 </div>
               </div>
               
               <div className="flex items-center space-x-2 text-sm text-gray-400">
                 <Users className="w-4 h-4" />
-                <span>1,000+ developers</span>
+                <span></span>
                 <div className="w-1 h-1 bg-gray-600 rounded-full mx-2" />
                 <Star className="w-4 h-4 text-yellow-400" />
-                <span>4.9/5 rating</span>
+                <span></span>
               </div>
             </div>
           </div>
@@ -434,7 +434,7 @@ export function SparrowServices({ onServiceSelect }: SparrowServicesProps) {
               </div>
               
               <p className="text-xs text-gray-500">
-                © 2025 Sparrow AI - Built by Satvik Singh with ❤️
+                
               </p>
             </div>
           </div>
