@@ -134,17 +134,8 @@ export function SparrowServices({ onServiceSelect }: SparrowServicesProps) {
         ))}
       </div>
 
-      <div className="relative z-10 min-h-screen flex flex-col">
-       
-            
-            <h1 className="text-5xl md:text-6xl font-bold mb-4 bg-gradient-to-r from-white via-blue-200 to-purple-200 bg-clip-text text-transparent">
-              Sparrow AI
-            </h1>
-            <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-              Explore our AI-powered tools and services designed to accelerate your workflow
-            </p>
-          </div>
-        </motion.header>
+    
+
 
         {/* Main Content */}
         <div className="flex-1 max-w-7xl mx-auto px-6 py-12 w-full">
