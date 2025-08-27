@@ -51,7 +51,7 @@ export function SparrowServices({ onServiceSelect }: SparrowServicesProps) {
       title: "Mobile App Builder",
       description: "Generate React Native and Flutter applications with AI assistance. Create cross-platform mobile apps effortlessly.",
       category: "mobile",
-      status: "coming-soon",
+      status: "beta-testing",
       icon: Smartphone,
       features: ["Cross-Platform", "Native Performance", "UI Components", "App Store Ready"],
       color: "from-green-500 to-emerald-500",
@@ -61,7 +61,7 @@ export function SparrowServices({ onServiceSelect }: SparrowServicesProps) {
       title: "AI Chatbot Builder",
       description: "Build intelligent chatbots and conversational AI interfaces with advanced natural language processing.",
       category: "ai",
-      status: "coming-soon",
+      status: "beta-testing",
       icon: Bot,
       features: ["NLP Integration", "Custom Training", "Multi-Platform", "Analytics"],
       color: "from-purple-500 to-pink-500",
@@ -71,7 +71,7 @@ export function SparrowServices({ onServiceSelect }: SparrowServicesProps) {
       title: "API Generator",
       description: "Generate RESTful APIs and GraphQL endpoints with automatic documentation and testing suites.",
       category: "web",
-      status: "coming-soon",
+      status: "beta-testing",
       icon: Database,
       features: ["REST & GraphQL", "Auto Documentation", "Testing Suite", "Database Integration"],
       color: "from-orange-500 to-red-500",
@@ -81,7 +81,7 @@ export function SparrowServices({ onServiceSelect }: SparrowServicesProps) {
       title: "UI Component Library",
       description: "Create custom UI component libraries with design systems and interactive documentation.",
       category: "design",
-      status: "coming-soon",
+      status: "beta-testing",
       icon: Palette,
       features: ["Design System", "Interactive Docs", "Theme Support", "Export Options"],
       color: "from-indigo-500 to-purple-500",
@@ -91,7 +91,7 @@ export function SparrowServices({ onServiceSelect }: SparrowServicesProps) {
       title: "Automation Tools",
       description: "Build workflow automation and integration tools with AI-powered logic and decision making.",
       category: "ai",
-      status: "coming-soon",
+      status: "beta-testing",
       icon: Zap,
       features: ["Workflow Builder", "AI Logic", "Integrations", "Scheduling"],
       color: "from-yellow-500 to-orange-500",
@@ -106,7 +106,7 @@ export function SparrowServices({ onServiceSelect }: SparrowServicesProps) {
   })
 
   const availableServices = filteredServices.filter(s => s.status === "available")
-  const comingSoonServices = filteredServices.filter(s => s.status === "coming-soon")
+  const betaTestingServices = filteredServices.filter(s => s.status === "beta-testing")
 
   return (
     <div className="min-h-screen bg-black text-white overflow-hidden">
@@ -258,8 +258,8 @@ export function SparrowServices({ onServiceSelect }: SparrowServicesProps) {
             </motion.section>
           )}
 
-          {/* Coming Soon Services */}
-          {comingSoonServices.length > 0 && (
+          {/* Beta Testing Services */}
+          {betaTestingServices.length > 0 && (
             <motion.section
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -267,14 +267,14 @@ export function SparrowServices({ onServiceSelect }: SparrowServicesProps) {
             >
               <div className="flex items-center space-x-3 mb-8">
                 <div className="w-3 h-3 bg-orange-400 rounded-full animate-pulse" />
-                <h3 className="text-2xl font-bold text-white">Coming Soon</h3>
+                <h3 className="text-2xl font-bold text-white">Beta Testing (Contact to access)</h3>
                 <Badge className="bg-orange-600 text-white">
-                  {comingSoonServices.length} In Development
+                  {betaTestingServices.length} In Beta
                 </Badge>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {comingSoonServices.map((service, index) => {
+                {betaTestingServices.map((service, index) => {
                   const Icon = service.icon
                   return (
                     <motion.div
@@ -292,7 +292,7 @@ export function SparrowServices({ onServiceSelect }: SparrowServicesProps) {
                               <Icon className="w-full h-full text-white" />
                             </div>
                             <Badge variant="outline" className="border-orange-600 text-orange-400 bg-orange-900/20">
-                              Coming Soon
+                              Beta Testing
                             </Badge>
                           </div>
                           
@@ -323,7 +323,7 @@ export function SparrowServices({ onServiceSelect }: SparrowServicesProps) {
                               className="w-full bg-gray-700 text-gray-400 cursor-not-allowed"
                             >
                               <Clock className="w-4 h-4 mr-2" />
-                              Coming Soon
+                              Beta Testing
                             </Button>
                           </div>
                         </CardContent>
