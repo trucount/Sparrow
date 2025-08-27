@@ -148,9 +148,28 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Listen for code generation events from chat
   useEffect(() => {
+    const handleSessionUpdate = (event: CustomEvent) => {
+      const { sessionId, projectId } = event.detail
+      if (currentProject && sessionId) {
+        // Link current project to chat session
+        const chatSessions = JSON.parse(localStorage.getItem("sparrow_chat_sessions") || "[]")
+        const updatedSessions = chatSessions.map((session: any) => 
+          session.id === sessionId 
+            ? { ...session, projectId: currentProject.id }
+            : session
+        )
+        localStorage.setItem("sparrow_chat_sessions", JSON.stringify(updatedSessions))
+      }
+    }
+
     const handleCodeGenerated = (event: CustomEvent) => {
       const { code, language, filename } = event.detail
       addOrUpdateFile(filename, code, language)
+      
+      // Notify chat about file generation
+      window.dispatchEvent(new CustomEvent("fileGenerated", {
+        detail: { filename, language, projectId: currentProject?.id }
+      }))
     }
 
     const handleCodeContentUpdate = (event: CustomEvent) => {
@@ -299,12 +318,14 @@ document.addEventListener('DOMContentLoaded', function() {
     window.addEventListener("codeContentUpdate", handleCodeContentUpdate as EventListener)
     window.addEventListener("createProjectFiles", handleCreateProjectFiles as EventListener)
     window.addEventListener("createNewProject", handleCreateNewProject as EventListener)
+    window.addEventListener("sessionUpdate", handleSessionUpdate as EventListener)
 
     return () => {
       window.removeEventListener("codeGenerated", handleCodeGenerated as EventListener)
       window.removeEventListener("codeContentUpdate", handleCodeContentUpdate as EventListener)
       window.removeEventListener("createProjectFiles", handleCreateProjectFiles as EventListener)
       window.removeEventListener("createNewProject", handleCreateNewProject as EventListener)
+      window.removeEventListener("sessionUpdate", handleSessionUpdate as EventListener)
     }
   }, [currentProject])
 

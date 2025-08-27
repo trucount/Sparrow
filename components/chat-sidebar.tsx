@@ -20,6 +20,13 @@ interface ChatSession {
   title: string
   messages: Message[]
   createdAt: Date
+  lastActive: Date
+  projectId?: string
+  context?: {
+    lastGeneratedFiles: string[]
+    currentTask: string
+    userPreferences: Record<string, any>
+  }
 }
 
 interface CodeBlock {
@@ -39,6 +46,68 @@ export function ChatSidebar() {
   const [imageAnalysis, setImageAnalysis] = useState<string>("")
   const [canSend, setCanSend] = useState(true)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Load sessions from localStorage on mount
+  useEffect(() => {
+    const savedSessions = localStorage.getItem("sparrow_chat_sessions")
+    if (savedSessions) {
+      try {
+        const parsedSessions = JSON.parse(savedSessions).map((session: any) => ({
+          ...session,
+          createdAt: new Date(session.createdAt),
+          lastActive: new Date(session.lastActive),
+          messages: session.messages.map((msg: any) => ({
+            ...msg,
+            timestamp: new Date(msg.timestamp)
+          }))
+        }))
+        setSessions(parsedSessions)
+        
+        // Set the most recent session as current
+        if (parsedSessions.length > 0) {
+          const mostRecent = parsedSessions.sort((a: ChatSession, b: ChatSession) => 
+            b.lastActive.getTime() - a.lastActive.getTime()
+          )[0]
+          setCurrentSession(mostRecent.id)
+        }
+      } catch (error) {
+        console.error("Failed to load chat sessions:", error)
+      }
+    }
+  }, [])
+
+  // Save sessions to localStorage whenever sessions change
+  useEffect(() => {
+    if (sessions.length > 0) {
+      localStorage.setItem("sparrow_chat_sessions", JSON.stringify(sessions))
+    }
+  }, [sessions])
+
+  // Update session title based on first user message
+  const updateSessionTitle = (sessionId: string, firstMessage: string) => {
+    const title = firstMessage.length > 30 
+      ? firstMessage.substring(0, 30) + "..."
+      : firstMessage
+    
+    setSessions(prev => prev.map(session => 
+      session.id === sessionId 
+        ? { ...session, title, lastActive: new Date() }
+        : session
+    ))
+  }
+
+  // Update session context
+  const updateSessionContext = (sessionId: string, context: Partial<ChatSession['context']>) => {
+    setSessions(prev => prev.map(session => 
+      session.id === sessionId 
+        ? { 
+            ...session, 
+            context: { ...session.context, ...context },
+            lastActive: new Date()
+          }
+        : session
+    ))
+  }
 
   const availableModels = [
     { id: "openai/gpt-oss-20b:free", name: "OpenAI: gpt-oss-20b (free)" },
@@ -316,6 +385,12 @@ export function ChatSidebar() {
       title: "New Chat",
       messages: [],
       createdAt: new Date(),
+      lastActive: new Date(),
+      context: {
+        lastGeneratedFiles: [],
+        currentTask: "",
+        userPreferences: {}
+      }
     }
     setSessions((prev) => [newSession, ...prev])
     setCurrentSession(newSession.id)
@@ -449,6 +524,8 @@ export function ChatSidebar() {
       sessionId = Date.now().toString()
     }
 
+    const currentSessionData = sessions.find(s => s.id === sessionId)
+    
     let finalContent = input.trim()
 
     // Add image analysis if available
@@ -474,9 +551,20 @@ export function ChatSidebar() {
     // Add user message to chat
     setSessions((prev) =>
       prev.map((session) =>
-        session.id === sessionId ? { ...session, messages: [...session.messages, userMessage] } : session,
+        session.id === sessionId ? { 
+          ...session, 
+          messages: [...session.messages, userMessage],
+          lastActive: new Date(),
+          title: session.messages.length === 0 ? (input.trim().length > 30 ? input.trim().substring(0, 30) + "..." : input.trim()) : session.title
+        } : session,
       ),
     )
+
+    // Update session context with current task
+    updateSessionContext(sessionId!, {
+      currentTask: input.trim(),
+      userPreferences: { selectedModel }
+    })
 
     // Wait 3 seconds then send to AI
     setTimeout(async () => {
@@ -554,6 +642,25 @@ MANDATORY RULES:
 
 The system will first create all files from your structure, then populate them with your code.`
 
+          // Build conversation history for context
+          const conversationHistory = currentSessionData?.messages.slice(-10) || [] // Last 10 messages for context
+          const contextMessages = conversationHistory.map(msg => ({
+            role: msg.role,
+            content: msg.content
+          }))
+
+          // Add session context to system prompt
+          let enhancedSystemPrompt = systemPrompt
+          if (currentSessionData?.context) {
+            const context = currentSessionData.context
+            enhancedSystemPrompt += `\n\nCONTEXT FROM PREVIOUS CONVERSATION:
+- Last generated files: ${context.lastGeneratedFiles.join(', ') || 'None'}
+- Current task context: ${context.currentTask || 'New conversation'}
+- User preferences: Model - ${context.userPreferences?.selectedModel || selectedModel}
+
+Use this context to provide continuity in your responses and build upon previous work when relevant.`
+          }
+
           const apiKey = localStorage.getItem("sparrow_openrouter_key")
           if (!apiKey) {
             throw new Error("No API key found. Please refresh the page to set up your API key.")
@@ -572,12 +679,13 @@ The system will first create all files from your structure, then populate them w
               messages: [
                 {
                   role: "system",
-                  content: systemPrompt,
+                  content: enhancedSystemPrompt,
                 },
+                ...contextMessages.slice(0, -1), // Previous conversation context
                 {
                   role: "user",
                   content: userMessage.content,
-                },
+                }
               ],
             }),
           })
@@ -1089,9 +1197,21 @@ setTimeout(() => {
 
         setSessions((prev) =>
           prev.map((session) =>
-            session.id === sessionId ? { ...session, messages: [...session.messages, assistantMessage] } : session,
+            session.id === sessionId ? { 
+              ...session, 
+              messages: [...session.messages, assistantMessage],
+              lastActive: new Date()
+            } : session,
           ),
         )
+
+        // Update session context with generated files
+        if (fileStructure.length > 0) {
+          updateSessionContext(sessionId!, {
+            lastGeneratedFiles: fileStructure,
+            currentTask: `Generated: ${fileStructure.join(', ')}`
+          })
+        }
 
         const codeBlocks = parseCodeBlocks(assistantContent)
         if (codeBlocks.length > 0) {
@@ -1116,7 +1236,11 @@ setTimeout(() => {
 
         setSessions((prev) =>
           prev.map((session) =>
-            session.id === currentSession ? { ...session, messages: [...session.messages, errorMessage] } : session,
+            session.id === currentSession ? { 
+              ...session, 
+              messages: [...session.messages, errorMessage],
+              lastActive: new Date()
+            } : session,
           ),
         )
       } finally {
@@ -1133,6 +1257,22 @@ setTimeout(() => {
   }
 
   const currentSessionData = sessions.find((s) => s.id === currentSession)
+
+  const deleteSession = (sessionId: string) => {
+    setSessions(prev => prev.filter(s => s.id !== sessionId))
+    if (currentSession === sessionId) {
+      const remainingSessions = sessions.filter(s => s.id !== sessionId)
+      setCurrentSession(remainingSessions.length > 0 ? remainingSessions[0].id : null)
+    }
+  }
+
+  const clearAllSessions = () => {
+    if (confirm("Are you sure you want to clear all chat history? This cannot be undone.")) {
+      setSessions([])
+      setCurrentSession(null)
+      localStorage.removeItem("sparrow_chat_sessions")
+    }
+  }
 
   return (
     <div className="h-full flex flex-col">
@@ -1152,6 +1292,20 @@ setTimeout(() => {
           <Sparkles className="w-3 h-3 ml-2 opacity-60" />
         </Button>
 
+        {sessions.length > 0 && (
+          <div className="mt-2 flex justify-between items-center">
+            <span className="text-xs text-gray-500">{sessions.length} chat{sessions.length !== 1 ? 's' : ''}</span>
+            <Button
+              onClick={clearAllSessions}
+              size="sm"
+              variant="ghost"
+              className="text-xs text-red-400 hover:text-red-300 p-1"
+            >
+              Clear All
+            </Button>
+          </div>
+        )}
+
         <div className="mt-3">
           <select
             value={selectedModel}
@@ -1169,28 +1323,85 @@ setTimeout(() => {
         <div className="mt-4 space-y-2 max-h-32 overflow-y-auto smooth-scroll">
           <AnimatePresence>
             {sessions.map((session, index) => (
-              <motion.button
+              <motion.div
                 key={session.id}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ delay: index * 0.1 }}
-                onClick={() => setCurrentSession(session.id)}
-                className={`w-full text-left p-3 rounded-lg text-sm truncate transition-all-smooth hover-lift ${
-                  currentSession === session.id
-                    ? "bg-gradient-to-r from-gray-800 to-gray-700 text-white glow-white"
-                    : "text-gray-400 hover:bg-gray-900 hover:text-white"
-                }`}
+                className="group relative"
               >
-                <MessageSquare className="w-3 h-3 inline mr-2" />
-                {session.title}
-              </motion.button>
+                <button
+                  onClick={() => setCurrentSession(session.id)}
+                  className={`w-full text-left p-3 rounded-lg text-sm transition-all-smooth hover-lift ${
+                    currentSession === session.id
+                      ? "bg-gradient-to-r from-gray-800 to-gray-700 text-white glow-white"
+                      : "text-gray-400 hover:bg-gray-900 hover:text-white"
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center min-w-0 flex-1">
+                      <MessageSquare className="w-3 h-3 mr-2 flex-shrink-0" />
+                      <span className="truncate">{session.title}</span>
+                    </div>
+                    <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span className="text-xs text-gray-500">
+                        {session.messages.length}
+                      </span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          deleteSession(session.id)
+                        }}
+                        className="text-red-400 hover:text-red-300 p-1"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    {session.lastActive.toLocaleDateString()} • {session.messages.length} messages
+                  </div>
+                </button>
+              </motion.div>
             ))}
           </AnimatePresence>
         </div>
       </motion.div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4 smooth-scroll min-h-0">
+        {currentSessionData && currentSessionData.messages.length === 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center py-8"
+          >
+            <div className="bg-gradient-to-br from-gray-800 to-gray-700 rounded-xl p-6 border border-gray-600">
+              <Sparkles className="w-8 h-8 mx-auto mb-3 text-blue-400" />
+              <h3 className="text-white font-semibold mb-2">Start a New Conversation</h3>
+              <p className="text-gray-400 text-sm">
+                Ask me to create websites, components, or help with any coding task!
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2 justify-center">
+                {[
+                  "Create a landing page",
+                  "Build a todo app", 
+                  "Design a portfolio site",
+                  "Make a calculator"
+                ].map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    onClick={() => setInput(suggestion)}
+                    className="text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white px-3 py-1 rounded-full transition-colors"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        )}
+
         <AnimatePresence>
           {currentSessionData?.messages.map((message, index) => (
             <motion.div
@@ -1213,6 +1424,11 @@ setTimeout(() => {
                 <div className="text-xs opacity-60 mt-2 flex items-center">
                   <div className="w-1 h-1 bg-current rounded-full mr-2" />
                   {message.timestamp.toLocaleTimeString()}
+                  {message.role === "assistant" && (
+                    <span className="ml-2 text-xs opacity-40">
+                      • {selectedModel.split('/')[0]}
+                    </span>
+                  )}
                 </div>
               </motion.div>
             </motion.div>
