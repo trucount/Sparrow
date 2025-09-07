@@ -560,7 +560,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 transition={{ duration: 0.3 }}
                 className="h-full"
               >
-                <StatusPanel files={files} project={currentProject} />
+                <StatusPanel files={files} project={currentProject} serviceType={serviceType} />
               </motion.div>
             </TabsContent>
 

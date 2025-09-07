@@ -12,6 +12,7 @@ import type { ProjectFile } from "./workspace-area"
 interface CodeEditorProps {
   files: ProjectFile[]
   activeFileId: string | null
+  serviceType?: string
   onFileSelect: (fileId: string) => void
   onFileUpdate: (fileId: string, content: string) => void
   onFileDelete: (fileId: string) => void
@@ -21,6 +22,7 @@ interface CodeEditorProps {
 export function CodeEditor({
   files,
   activeFileId,
+  serviceType = "website-builder",
   onFileSelect,
   onFileUpdate,
   onFileDelete,

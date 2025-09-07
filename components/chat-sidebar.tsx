@@ -46,9 +46,14 @@ export function ChatSidebar() {
   const [imageAnalysis, setImageAnalysis] = useState<string>("")
   const [canSend, setCanSend] = useState(true)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [serviceType, setServiceType] = useState<string>("website-builder")
 
   // Load sessions from localStorage on mount
   useEffect(() => {
+    // Check service type
+    const savedServiceType = localStorage.getItem("sparrow_service_type") || "website-builder"
+    setServiceType(savedServiceType)
+
     const savedSessions = localStorage.getItem("sparrow_chat_sessions")
     if (savedSessions) {
       try {
@@ -573,7 +578,43 @@ export function ChatSidebar() {
         const baseDelay = 1000 // 1 second
 
         try {
-          const systemPrompt = `You are Sparrow, an AI coding assistant specialized in web development. You help users create complete web applications with HTML, CSS, and JavaScript.
+          const basePrompt = serviceType === "web-app-builder" 
+            ? `You are Sparrow AI, an expert full-stack web developer assistant. You help users create modern web applications using TypeScript, Next.js, React, and other modern frameworks. You can install packages, create components, and build complete applications.
+
+IMPORTANT: When generating code, use these technologies:
+- TypeScript for all JavaScript files
+- React components with proper TypeScript interfaces
+- Next.js for routing and SSR when needed
+- Modern CSS (Tailwind CSS preferred)
+- Package management with npm/yarn
+- Modern web development best practices
+
+When user asks for features, create:
+- Proper TypeScript interfaces and types
+- React components with hooks
+- Next.js pages and API routes when needed
+- Responsive designs with modern CSS
+- Package installations when required
+
+For file generation, use these extensions:
+- .tsx for React components
+- .ts for TypeScript utilities
+- .css or .module.css for styles
+- .json for configuration files`
+            : `You are Sparrow AI, an expert web developer assistant. You help users create websites using HTML, CSS, and JavaScript.
+
+IMPORTANT: When generating code, always create separate files for HTML, CSS, and JavaScript. Use these exact filenames:
+- index.html for the main HTML structure
+- styles.css for all CSS styling
+- script.js for all JavaScript functionality`
+
+          const continuationText = serviceType === "web-app-builder"
+            ? "When user asks for a web application, generate complete, functional code using modern web technologies."
+            : "When user asks for a website or web application, generate complete, functional code that works together across these three files."
+
+          const systemPrompt = `${basePrompt}
+
+${continuationText}
 
 CRITICAL REQUIREMENTS - ALWAYS FOLLOW THIS EXACT FORMAT:
 

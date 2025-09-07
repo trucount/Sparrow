@@ -7,9 +7,10 @@ import type { ProjectFile, Project } from "./workspace-area"
 interface StatusPanelProps {
   files: ProjectFile[]
   project: Project | null
+  serviceType?: string
 }
 
-export function StatusPanel({ files, project }: StatusPanelProps) {
+export function StatusPanel({ files, project, serviceType = "website-builder" }: StatusPanelProps) {
   const getTotalLines = () => {
     return files.reduce((total, file) => {
       return total + file.content.split("\n").length
@@ -44,19 +45,37 @@ export function StatusPanel({ files, project }: StatusPanelProps) {
         <div>
           <h3 className="text-lg font-semibold mb-3 flex items-center">
             <Activity className="w-5 h-5 mr-2" />
-            Console
+            {serviceType === "web-app-builder" ? "Development Console" : "Console"}
           </h3>
           <div className="bg-black rounded p-4 font-mono text-sm min-h-32 max-h-48 overflow-y-auto">
-            <div className="text-green-400">Sparrow AI v1.0.0</div>
-            <div className="text-gray-400">Ready to assist with your coding projects</div>
+            <div className="text-green-400">
+              Sparrow AI v1.0.0 - {serviceType === "web-app-builder" ? "Web App Builder" : "Website Builder"}
+            </div>
+            <div className="text-gray-400">
+              {serviceType === "web-app-builder" 
+                ? "Ready to build modern web applications with TypeScript & React" 
+                : "Ready to assist with your coding projects"
+              }
+            </div>
             {project && (
               <>
                 <div className="text-blue-400 mt-2">Project: {project.name}</div>
                 <div className="text-gray-400">{files.length} file(s) loaded</div>
                 <div className="text-gray-400">Last modified: {project.lastModified.toLocaleString()}</div>
+                {serviceType === "web-app-builder" && (
+                  <>
+                    <div className="text-purple-400 mt-1">TypeScript: Ready</div>
+                    <div className="text-purple-400">React: Ready</div>
+                    <div className="text-purple-400">Next.js: Ready</div>
+                  </>
+                )}
               </>
             )}
-            {files.length > 0 && <div className="text-green-400 mt-1">All files synchronized</div>}
+            {files.length > 0 && (
+              <div className="text-green-400 mt-1">
+                {serviceType === "web-app-builder" ? "All components synchronized" : "All files synchronized"}
+              </div>
+            )}
           </div>
         </div>
 
