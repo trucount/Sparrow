@@ -47,6 +47,16 @@ export function SparrowServices({ onServiceSelect }: SparrowServicesProps) {
       color: "from-blue-500 to-cyan-500",
     },
     {
+      id: "web-app-builder",
+      title: "Web App Builder",
+      description: "Build modern web applications with TypeScript, Next.js, React, and advanced frameworks. Full-stack development with package management.",
+      category: "web",
+      status: "available",
+      icon: Code,
+      features: ["TypeScript/React", "Next.js", "Package Manager", "Live Preview", "Deploy Ready"],
+      color: "from-purple-500 to-indigo-500",
+    },
+    {
       id: "mobile-app-builder",
       title: "Mobile App Builder",
       description: "Generate React Native and Flutter applications with AI assistance. Create cross-platform mobile apps effortlessly.",
