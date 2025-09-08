@@ -16,7 +16,8 @@ import {
   Zap, 
   ArrowRight,
   Clock,
-  Sparkles
+  Sparkles,
+  Code
 } from "lucide-react"
 
 interface SparrowServicesProps {
