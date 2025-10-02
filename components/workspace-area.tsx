@@ -31,8 +31,246 @@ export function WorkspaceArea() {
   const [activeTab, setActiveTab] = useState("preview")
   const [currentProject, setCurrentProject] = useState<Project | null>(null)
   const [activeFileId, setActiveFileId] = useState<string | null>(null)
+  const [serviceType, setServiceType] = useState<string>("website-builder")
+
+  // Load service type from localStorage
+  useEffect(() => {
+    const savedServiceType = localStorage.getItem("sparrow_service_type") || "website-builder"
+    setServiceType(savedServiceType)
+  }, [])
 
   const createDefaultProject = () => {
+    const serviceType = localStorage.getItem("sparrow_service_type") || "website-builder"
+    
+    if (serviceType === "web-app-builder") {
+      const defaultFiles: ProjectFile[] = [
+        {
+          id: "app_page_tsx",
+          name: "app/page.tsx",
+          content: `import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+
+export default function HomePage() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900">
+      <div className="container mx-auto px-4 py-16">
+        <div className="text-center space-y-8">
+          <h1 className="text-4xl md:text-6xl font-bold text-white">
+            Welcome to Your App
+          </h1>
+          <p className="text-xl text-gray-300 max-w-2xl mx-auto">
+            Built with Next.js, TypeScript, and Tailwind CSS
+          </p>
+          <Card className="max-w-md mx-auto">
+            <CardHeader>
+              <CardTitle>Get Started</CardTitle>
+              <CardDescription>
+                Your modern web application is ready
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button className="w-full">
+                Start Building
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  )
+}`,
+          language: "tsx",
+          path: "app/page.tsx",
+          lastModified: new Date(),
+        },
+        {
+          id: "components_ui_button_tsx",
+          name: "components/ui/button.tsx",
+          content: `import * as React from "react"
+import { Slot } from "@radix-ui/react-slot"
+import { cva, type VariantProps } from "class-variance-authority"
+import { cn } from "@/lib/utils"
+
+const buttonVariants = cva(
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+  {
+    variants: {
+      variant: {
+        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+        outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
+        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        ghost: "hover:bg-accent hover:text-accent-foreground",
+        link: "text-primary underline-offset-4 hover:underline",
+      },
+      size: {
+        default: "h-10 px-4 py-2",
+        sm: "h-9 rounded-md px-3",
+        lg: "h-11 rounded-md px-8",
+        icon: "h-10 w-10",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+      size: "default",
+    },
+  }
+)
+
+export interface ButtonProps
+  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
+    VariantProps<typeof buttonVariants> {
+  asChild?: boolean
+}
+
+const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+  ({ className, variant, size, asChild = false, ...props }, ref) => {
+    const Comp = asChild ? Slot : "button"
+    return (
+      <Comp
+        className={cn(buttonVariants({ variant, size, className }))}
+        ref={ref}
+        {...props}
+      />
+    )
+  }
+)
+Button.displayName = "Button"
+
+export { Button, buttonVariants }`,
+          language: "tsx",
+          path: "components/ui/button.tsx",
+          lastModified: new Date(),
+        },
+        {
+          id: "lib_utils_ts",
+          name: "lib/utils.ts",
+          content: `import { type ClassValue, clsx } from "clsx"
+import { twMerge } from "tailwind-merge"
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}`,
+          language: "typescript",
+          path: "lib/utils.ts",
+          lastModified: new Date(),
+        },
+        {
+          id: "package_json",
+          name: "package.json",
+          content: `{
+  "name": "sparrow-web-app",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "15.2.4",
+    "react": "^19",
+    "react-dom": "^19",
+    "typescript": "^5",
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "tailwindcss": "^4.1.9",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^2.5.5",
+    "class-variance-authority": "^0.7.1",
+    "@radix-ui/react-slot": "latest",
+    "lucide-react": "^0.454.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.9",
+    "postcss": "^8.5"
+  }
+}`,
+          language: "json",
+          path: "package.json",
+          lastModified: new Date(),
+        },
+        {
+          id: "tailwind_config_ts",
+          name: "tailwind.config.ts",
+          content: `import type { Config } from "tailwindcss"
+
+const config: Config = {
+  content: [
+    "./pages/**/*.{js,ts,jsx,tsx,mdx}",
+    "./components/**/*.{js,ts,jsx,tsx,mdx}",
+    "./app/**/*.{js,ts,jsx,tsx,mdx}",
+  ],
+  theme: {
+    extend: {
+      colors: {
+        border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
+        primary: {
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))",
+        },
+        secondary: {
+          DEFAULT: "hsl(var(--secondary))",
+          foreground: "hsl(var(--secondary-foreground))",
+        },
+        destructive: {
+          DEFAULT: "hsl(var(--destructive))",
+          foreground: "hsl(var(--destructive-foreground))",
+        },
+        muted: {
+          DEFAULT: "hsl(var(--muted))",
+          foreground: "hsl(var(--muted-foreground))",
+        },
+        accent: {
+          DEFAULT: "hsl(var(--accent))",
+          foreground: "hsl(var(--accent-foreground))",
+        },
+        popover: {
+          DEFAULT: "hsl(var(--popover))",
+          foreground: "hsl(var(--popover-foreground))",
+        },
+        card: {
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))",
+        },
+      },
+      borderRadius: {
+        lg: "var(--radius)",
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 4px)",
+      },
+    },
+  },
+  plugins: [],
+}
+
+export default config`,
+          language: "typescript",
+          path: "tailwind.config.ts",
+          lastModified: new Date(),
+        },
+      ]
+
+      const newProject: Project = {
+        id: Date.now().toString(),
+        name: "Sparrow Web App",
+        description: "Modern TypeScript/React web application",
+        files: defaultFiles,
+        createdAt: new Date(),
+        lastModified: new Date(),
+      }
+
+      setCurrentProject(newProject)
+      setActiveFileId("app_page_tsx")
+      return
+    }
+
     const defaultFiles: ProjectFile[] = [
       {
         id: "index_html",

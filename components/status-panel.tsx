@@ -45,7 +45,7 @@ export function StatusPanel({ files, project, serviceType = "website-builder" }:
         <div>
           <h3 className="text-lg font-semibold mb-3 flex items-center">
             <Activity className="w-5 h-5 mr-2" />
-            {serviceType === "web-app-builder" ? "Development Console" : "Console"}
+            {serviceType === "web-app-builder" ? "Development Console" : "Build Console"}
           </h3>
           <div className="bg-black rounded p-4 font-mono text-sm min-h-32 max-h-48 overflow-y-auto">
             <div className="text-green-400">
@@ -53,8 +53,8 @@ export function StatusPanel({ files, project, serviceType = "website-builder" }:
             </div>
             <div className="text-gray-400">
               {serviceType === "web-app-builder" 
-                ? "Ready to build modern web applications with TypeScript & React" 
-                : "Ready to assist with your coding projects"
+                ? "Ready to build modern web applications with Next.js 15, TypeScript & React 19" 
+                : "Ready to build websites with HTML, CSS & JavaScript"
               }
             </div>
             {project && (
@@ -64,16 +64,18 @@ export function StatusPanel({ files, project, serviceType = "website-builder" }:
                 <div className="text-gray-400">Last modified: {project.lastModified.toLocaleString()}</div>
                 {serviceType === "web-app-builder" && (
                   <>
-                    <div className="text-purple-400 mt-1">TypeScript: Ready</div>
-                    <div className="text-purple-400">React: Ready</div>
-                    <div className="text-purple-400">Next.js: Ready</div>
+                    <div className="text-purple-400 mt-1">✓ TypeScript 5.x: Ready</div>
+                    <div className="text-purple-400">✓ React 19: Ready</div>
+                    <div className="text-purple-400">✓ Next.js 15.2.4: Ready</div>
+                    <div className="text-purple-400">✓ Tailwind CSS 4.x: Ready</div>
+                    <div className="text-purple-400">✓ Radix UI: Ready</div>
                   </>
                 )}
               </>
             )}
             {files.length > 0 && (
               <div className="text-green-400 mt-1">
-                {serviceType === "web-app-builder" ? "All components synchronized" : "All files synchronized"}
+                {serviceType === "web-app-builder" ? "✓ All components synchronized" : "✓ All files synchronized"}
               </div>
             )}
           </div>

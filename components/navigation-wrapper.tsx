@@ -58,15 +58,14 @@ export function NavigationWrapper() {
 
   const handleServiceSelected = (serviceId: string) => {
     if (serviceId === "website-builder") {
+      localStorage.setItem("sparrow_service_type", "website-builder")
       setShowServices(false)
       setShowMainApp(true)
     } else if (serviceId === "web-app-builder") {
-      // Set service type in localStorage to differentiate
       localStorage.setItem("sparrow_service_type", "web-app-builder")
       setShowServices(false)
       setShowMainApp(true)
     }
-    // Add other service handlers here when they become available
   }
 
   if (!isMounted) {

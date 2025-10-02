@@ -50,11 +50,11 @@ export function SparrowServices({ onServiceSelect }: SparrowServicesProps) {
     {
       id: "web-app-builder",
       title: "Web App Builder",
-      description: "Build modern web applications with TypeScript, Next.js, React, and advanced frameworks. Full-stack development with package management.",
+      description: "Build modern web applications with TypeScript, Next.js, React, Tailwind CSS, and advanced frameworks. Full-stack development with AI-powered component generation, package management, and deployment.",
       category: "web",
       status: "available",
       icon: Code,
-      features: ["TypeScript/React", "Next.js", "Package Manager", "Live Preview", "Deploy Ready"],
+      features: ["TypeScript/React", "Next.js 15", "Tailwind CSS", "AI Components", "Package Manager", "Live Preview", "Deploy Ready", "Database Integration"],
       color: "from-purple-500 to-indigo-500",
     },
     {
