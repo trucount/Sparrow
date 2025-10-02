@@ -711,24 +711,24 @@ document.addEventListener('DOMContentLoaded', function() {
           <TabsList className="grid w-full grid-cols-4 bg-gray-900/80 backdrop-blur-sm">
             <TabsTrigger
               value="preview"
-              className="data-[state=active]:bg-white data-[state=active]:text-black transition-all-smooth hover-lift relative overflow-hidden animated-border"
+              className="data-[state=active]:bg-white data-[state=active]:text-black transition-all duration-300 hover:scale-105 relative overflow-hidden"
             >
               <Eye className="w-4 h-4 mr-2" />
-              Preview
+              {serviceType === "web-app-builder" ? "App Preview" : "Preview"}
             </TabsTrigger>
             <TabsTrigger
               value="code"
-              className="data-[state=active]:bg-white data-[state=active]:text-black transition-all-smooth hover-lift relative overflow-hidden animated-border"
+              className="data-[state=active]:bg-white data-[state=active]:text-black transition-all duration-300 hover:scale-105 relative overflow-hidden"
             >
               <Code className="w-4 h-4 mr-2" />
-              Code{" "}
+              {serviceType === "web-app-builder" ? "Components" : "Code"}{" "}
               <AnimatePresence>
                 {files.length > 0 && (
                   <motion.span
                     initial={{ scale: 0, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     exit={{ scale: 0, opacity: 0 }}
-                    className="ml-1 bg-white text-black rounded-full px-2 py-0.5 text-xs pulse-glow"
+                    className="ml-1 bg-white text-black rounded-full px-2 py-0.5 text-xs"
                   >
                     {files.length}
                   </motion.span>
@@ -737,14 +737,14 @@ document.addEventListener('DOMContentLoaded', function() {
             </TabsTrigger>
             <TabsTrigger
               value="status"
-              className="data-[state=active]:bg-white data-[state=active]:text-black transition-all-smooth hover-lift relative overflow-hidden animated-border"
+              className="data-[state=active]:bg-white data-[state=active]:text-black transition-all duration-300 hover:scale-105 relative overflow-hidden"
             >
               <Activity className="w-4 h-4 mr-2" />
-              Status
+              {serviceType === "web-app-builder" ? "Console" : "Status"}
             </TabsTrigger>
             <TabsTrigger
               value="project"
-              className="data-[state=active]:bg-white data-[state=active]:text-black transition-all-smooth hover-lift relative overflow-hidden animated-border"
+              className="data-[state=active]:bg-white data-[state=active]:text-black transition-all duration-300 hover:scale-105 relative overflow-hidden"
             >
               <Settings className="w-4 h-4 mr-2" />
               Project
