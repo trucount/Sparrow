@@ -765,7 +765,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 transition={{ duration: 0.3 }}
                 className="h-full"
               >
-                <PreviewPanel files={files} />
+                <PreviewPanel files={files} serviceType={serviceType} />
               </motion.div>
             </TabsContent>
 
@@ -781,6 +781,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <CodeEditor
                   files={files}
                   activeFileId={activeFileId}
+                  serviceType={serviceType}
                   onFileSelect={setActiveFileId}
                   onFileUpdate={updateSpecificFile}
                   onFileDelete={deleteFile}

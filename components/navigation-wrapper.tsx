@@ -12,7 +12,7 @@ import { ApiKeySetup } from "./api-key-setup"
 import { MainInterface } from "./main-interface"
 import { SparrowServices } from "./sparrow-services"
 
-export function NavigationWrapper() {
+export default function NavigationWrapper() {
   const [currentPage, setCurrentPage] = useState("home")
   const [showTerms, setShowTerms] = useState(false)
   const [showApiKeySetup, setShowApiKeySetup] = useState(false)
