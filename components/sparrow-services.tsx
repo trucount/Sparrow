@@ -16,8 +16,7 @@ import {
   Zap, 
   ArrowRight,
   Clock,
-  Sparkles,
-  Code
+  Sparkles
 } from "lucide-react"
 
 interface SparrowServicesProps {
@@ -46,16 +45,6 @@ export function SparrowServices({ onServiceSelect }: SparrowServicesProps) {
       icon: Globe,
       features: ["Responsive Design", "Live Preview", "50+ AI Models", "Export Code"],
       color: "from-blue-500 to-cyan-500",
-    },
-    {
-      id: "web-app-builder",
-      title: "Web App Builder",
-      description: "Build modern web applications with TypeScript, Next.js, React, Tailwind CSS, and advanced frameworks. Full-stack development with AI-powered component generation, package management, and deployment.",
-      category: "web",
-      status: "available",
-      icon: Code,
-      features: ["TypeScript/React", "Next.js 15", "Tailwind CSS", "AI Components", "Package Manager", "Live Preview", "Deploy Ready", "Database Integration"],
-      color: "from-purple-500 to-indigo-500",
     },
     {
       id: "mobile-app-builder",

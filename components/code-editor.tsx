@@ -5,14 +5,13 @@ import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Input } from "@/components/ui/input"
-import { File, FileText, Globe, Palette, Settings, Copy, Download, Trash2, CreditCard as Edit3, Plus, Save, X } from "lucide-react"
+import { File, FileText, Globe, Palette, Settings, Copy, Download, Trash2, Edit3, Plus, Save, X } from "lucide-react"
 import { Code } from "lucide-react"
 import type { ProjectFile } from "./workspace-area"
 
 interface CodeEditorProps {
   files: ProjectFile[]
   activeFileId: string | null
-  serviceType?: string
   onFileSelect: (fileId: string) => void
   onFileUpdate: (fileId: string, content: string) => void
   onFileDelete: (fileId: string) => void
@@ -22,7 +21,6 @@ interface CodeEditorProps {
 export function CodeEditor({
   files,
   activeFileId,
-  serviceType = "website-builder",
   onFileSelect,
   onFileUpdate,
   onFileDelete,

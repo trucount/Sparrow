@@ -12,7 +12,7 @@ import { ApiKeySetup } from "./api-key-setup"
 import { MainInterface } from "./main-interface"
 import { SparrowServices } from "./sparrow-services"
 
-export default function NavigationWrapper() {
+export function NavigationWrapper() {
   const [currentPage, setCurrentPage] = useState("home")
   const [showTerms, setShowTerms] = useState(false)
   const [showApiKeySetup, setShowApiKeySetup] = useState(false)
@@ -58,14 +58,10 @@ export default function NavigationWrapper() {
 
   const handleServiceSelected = (serviceId: string) => {
     if (serviceId === "website-builder") {
-      localStorage.setItem("sparrow_service_type", "website-builder")
-      setShowServices(false)
-      setShowMainApp(true)
-    } else if (serviceId === "web-app-builder") {
-      localStorage.setItem("sparrow_service_type", "web-app-builder")
       setShowServices(false)
       setShowMainApp(true)
     }
+    // Add other service handlers here when they become available
   }
 
   if (!isMounted) {
