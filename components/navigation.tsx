@@ -22,6 +22,11 @@ export function Navigation({ currentPage, onPageChange, onEnterApp }: Navigation
     { id: "settings", label: "Settings", icon: Settings },
   ]
 
+  const appButtons = [
+    { label: "Website Builder", href: "/app" },
+    { label: "Next.js Dev", href: "/nextjs-dev" },
+  ]
+
   return (
     <motion.nav
       initial={{ y: -100, opacity: 0 }}
@@ -94,20 +99,24 @@ export function Navigation({ currentPage, onPageChange, onEnterApp }: Navigation
               )
             })}
             
-            {/* Enter App Button */}
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="ml-4"
-            >
-              <Button
-                onClick={onEnterApp}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-2 rounded-lg font-medium transition-all duration-300 shadow-lg hover:shadow-xl"
-              >
-                Enter App
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
-            </motion.div>
+            {/* App Buttons */}
+            <div className="ml-4 flex items-center space-x-2">
+              {appButtons.map((app) => (
+                <motion.div
+                  key={app.href}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Button
+                    onClick={() => window.location.href = app.href}
+                    className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white px-4 py-2 rounded-lg font-medium transition-all duration-300 shadow-lg hover:shadow-xl"
+                  >
+                    {app.label}
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </motion.div>
+              ))}
+            </div>
           </div>
         </div>
       </div>

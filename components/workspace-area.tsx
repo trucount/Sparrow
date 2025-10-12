@@ -27,7 +27,11 @@ export interface Project {
   lastModified: Date
 }
 
-export function WorkspaceArea() {
+interface WorkspaceAreaProps {
+  mode?: "website" | "nextjs"
+}
+
+export function WorkspaceArea({ mode = "website" }: WorkspaceAreaProps) {
   const [activeTab, setActiveTab] = useState("preview")
   const [currentProject, setCurrentProject] = useState<Project | null>(null)
   const [activeFileId, setActiveFileId] = useState<string | null>(null)
@@ -527,7 +531,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 transition={{ duration: 0.3 }}
                 className="h-full"
               >
-                <PreviewPanel files={files} />
+                <PreviewPanel files={files} mode={mode} />
               </motion.div>
             </TabsContent>
 

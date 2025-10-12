@@ -35,7 +35,11 @@ interface CodeBlock {
   content: string
 }
 
-export function ChatSidebar() {
+interface ChatSidebarProps {
+  mode?: "website" | "nextjs"
+}
+
+export function ChatSidebar({ mode = "website" }: ChatSidebarProps) {
   const [sessions, setSessions] = useState<ChatSession[]>([])
   const [currentSession, setCurrentSession] = useState<string | null>(null)
   const [input, setInput] = useState("")

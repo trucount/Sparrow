@@ -8,9 +8,16 @@ import type { ProjectFile } from "./workspace-area"
 
 interface PreviewPanelProps {
   files: ProjectFile[]
+  mode?: "website" | "nextjs"
 }
 
-export function PreviewPanel({ files }: PreviewPanelProps) {
+import { NextJSPreviewPanel } from "./nextjs-preview-panel"
+
+export function PreviewPanel({ files, mode = "website" }: PreviewPanelProps) {
+  if (mode === "nextjs") {
+    return <NextJSPreviewPanel files={files} />
+  }
+
   const [previewContent, setPreviewContent] = useState("")
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [previewUrl, setPreviewUrl] = useState("")
